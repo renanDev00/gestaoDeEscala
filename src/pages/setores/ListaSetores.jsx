@@ -1,17 +1,38 @@
 import { useState } from "react";
-import turnos from "../models/turnos";
+import setores from "../../models/setores";
 
-export default function TurnosPage() {
+export default function ListaSetores() {
+  const [setoresList, setSetoresList] = useState(setores);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
     nome: "",
-    horarioInicio: "",
-    horarioFim: "",
-    intervaloInicio: "",
-    intervaloFim: "",
-    descansoInicio: "",
-    descansoFim: "",
+    minimoFuncionarios: "",
+    atividadePadrao: "",
+    cor: "#FF5733",
   });
+
+  const openAddModal = () => {
+    setEditingId(null);
+    setFormValues({
+      nome: "",
+      minimoFuncionarios: "",
+      atividadePadrao: "",
+      cor: "#FF5733",
+    });
+    setIsModalOpen(true);
+  };
+
+  const openEditModal = (setor) => {
+    setEditingId(setor.id);
+    setFormValues({
+      nome: setor.nome,
+      minimoFuncionarios: String(setor.minimoFuncionarios),
+      atividadePadrao: setor.atividadePadrao || "",
+      cor: setor.cor || "#FF5733",
+    });
+    setIsModalOpen(true);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -20,31 +41,52 @@ export default function TurnosPage() {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log("Salvar turno:", formValues);
+
+    const payload = {
+      nome: formValues.nome.trim(),
+      minimoFuncionarios: Number(formValues.minimoFuncionarios),
+      atividadePadrao: formValues.atividadePadrao.trim(),
+      cor: formValues.cor,
+    };
+
+    if (!payload.nome || !payload.minimoFuncionarios) {
+      return;
+    }
+
+    if (editingId !== null) {
+      setSetoresList((prev) =>
+        prev.map((item) =>
+          item.id === editingId ? { ...item, ...payload } : item,
+        ),
+      );
+    } else {
+      const nextId =
+        setoresList.reduce((max, setor) => Math.max(max, setor.id), 0) + 1;
+      setSetoresList((prev) => [...prev, { id: nextId, ...payload }]);
+    }
+
     setIsModalOpen(false);
     setFormValues({
       nome: "",
-      horarioInicio: "",
-      horarioFim: "",
-      intervaloInicio: "",
-      intervaloFim: "",
-      descansoInicio: "",
-      descansoFim: "",
+      minimoFuncionarios: "",
+      atividadePadrao: "",
+      cor: "#FF5733",
     });
+    setEditingId(null);
+  };
+
+  const handleDelete = (setorId) => {
+    setSetoresList((prev) => prev.filter((item) => item.id !== setorId));
   };
 
   return (
     <section className="table-panel">
       <div className="panel-header">
-        <h2>Lista de turnos</h2>
+        <h2>Lista de setores</h2>
         <div className="search-box">
-          <input type="text" placeholder="Pesquisar turno" />
+          <input type="text" placeholder="Pesquisar setor" />
         </div>
-        <button
-          type="button"
-          className="add-button"
-          onClick={() => setIsModalOpen(true)}
-        >
+        <button type="button" className="add-button" onClick={openAddModal}>
           + Adicionar
         </button>
       </div>
@@ -53,33 +95,38 @@ export default function TurnosPage() {
         <table>
           <thead>
             <tr>
+              <th>ID</th>
               <th>Nome</th>
-              <th>Início</th>
-              <th>Fim</th>
-              <th>Intervalo</th>
-              <th>Descanso</th>
+              <th>Mínimo</th>
+              <th>Atividade</th>
+              <th>Cor</th>
               <th></th>
             </tr>
           </thead>
           <tbody>
-            {turnos.map((t) => (
-              <tr key={t.id}>
-                <td>{t.nome}</td>
-                <td>{t.horarioInicio}</td>
-                <td>{t.horarioFim}</td>
+            {setoresList.map((s) => (
+              <tr key={s.id}>
+                <td>{s.id}</td>
+                <td>{s.nome}</td>
+                <td>{s.minimoFuncionarios}</td>
+                <td>{s.atividadePadrao || "-"}</td>
                 <td>
-                  {t.intervaloInicio}-{t.intervaloFim}
+                  <span
+                    style={{
+                      display: "inline-block",
+                      width: 16,
+                      height: 16,
+                      borderRadius: 4,
+                      background: s.cor,
+                    }}
+                    aria-hidden="true"
+                  ></span>
                 </td>
-
-                <td>
-                  {t.descansoInicio || t.descansoinicio || "-"}-
-                  {t.descansoFim || "-"}
-                </td>
-
                 <td className="actions">
                   <button
                     className="btn edit"
-                    aria-label={`Editar turno ${t.nome}`}
+                    aria-label={`Editar setor ${s.nome}`}
+                    onClick={() => openEditModal(s)}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04a1.003 1.003 0 0 0 0-1.42l-2.34-2.34a1.003 1.003 0 0 0-1.42 0l-1.83 1.83 3.75 3.75 1.84-1.82z" />
@@ -87,7 +134,8 @@ export default function TurnosPage() {
                   </button>
                   <button
                     className="btn delete"
-                    aria-label={`Excluir turno ${t.nome}`}
+                    aria-label={`Excluir setor ${s.nome}`}
+                    onClick={() => handleDelete(s.id)}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
                       <path d="M6 19a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z" />
@@ -111,7 +159,7 @@ export default function TurnosPage() {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="modal-header">
-            <h3 id="modal-title">Adicionar turno</h3>
+            <h3 id="modal-title">Adicionar setor</h3>
             <button
               type="button"
               className="close-button"
@@ -131,61 +179,36 @@ export default function TurnosPage() {
                   value={formValues.nome}
                   onChange={handleChange}
                   type="text"
-                  placeholder="Nome do turno"
+                  placeholder="Digite o nome"
                 />
               </label>
               <label>
-                Horário Início
+                Mínimo funcionários
                 <input
-                  name="horarioInicio"
-                  value={formValues.horarioInicio}
+                  name="minimoFuncionarios"
+                  value={formValues.minimoFuncionarios}
                   onChange={handleChange}
-                  type="time"
+                  type="number"
+                  placeholder="Ex: 2"
                 />
               </label>
               <label>
-                Horário Fim
+                Atividade padrão
                 <input
-                  name="horarioFim"
-                  value={formValues.horarioFim}
+                  name="atividadePadrao"
+                  value={formValues.atividadePadrao}
                   onChange={handleChange}
-                  type="time"
+                  type="text"
+                  placeholder="Atividade padrão"
                 />
               </label>
               <label>
-                Intervalo Início
+                Cor
                 <input
-                  name="intervaloInicio"
-                  value={formValues.intervaloInicio}
+                  name="cor"
+                  value={formValues.cor}
                   onChange={handleChange}
-                  type="time"
-                />
-              </label>
-              <label>
-                Intervalo Fim
-                <input
-                  name="intervaloFim"
-                  value={formValues.intervaloFim}
-                  onChange={handleChange}
-                  type="time"
-                />
-              </label>
-              <label>
-                Descanso Início
-                <input
-                  name="descansoInicio"
-                  value={formValues.descansoInicio}
-                  onChange={handleChange}
-                  type="time"
-                />
-              </label>
-              <label>
-                Descanso Fim
-                <input
-                  name="descansoFim"
-                  value={formValues.descansoFim}
-                  onChange={handleChange}
-                  type="time"
+                  type="color"
                 />
               </label>
             </div>
