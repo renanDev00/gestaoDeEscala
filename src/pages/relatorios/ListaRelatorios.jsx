@@ -1,13 +1,18 @@
 import funcionarios from "../../models/funcionarios";
 import setores from "../../models/setores";
 import turnos from "../../models/turnos";
+import { getFromStorage } from "../../utils/storage";
 
 export default function ListaRelatorios() {
-  const totalFuncionarios = funcionarios.length;
-  const totalSetores = setores.length;
-  const totalTurnos = turnos.length;
+  const funcionariosList = getFromStorage("funcionarios") || funcionarios;
+  const setoresList = getFromStorage("setores") || setores;
+  const turnosList = getFromStorage("turnos") || turnos;
 
-  const coberturaMinima = setores.reduce(
+  const totalFuncionarios = funcionariosList.length;
+  const totalSetores = setoresList.length;
+  const totalTurnos = turnosList.length;
+
+  const coberturaMinima = setoresList.reduce(
     (total, setor) => total + setor.minimoFuncionarios,
     0,
   );
@@ -16,17 +21,17 @@ export default function ListaRelatorios() {
     (totalFuncionarios / Math.max(coberturaMinima, 1)) * 100,
   );
 
-  const turnoMaisUtilizado = [...turnos]
+  const turnoMaisUtilizado = [...turnosList]
     .map((turno) => ({
       nome: turno.nome,
-      total: funcionarios.filter(
+      total: funcionariosList.filter(
         (funcionario) => funcionario.turno === turno.id,
       ).length,
     }))
     .sort((a, b) => b.total - a.total)[0];
 
-  const setoresComCobertura = setores.map((setor) => {
-    const funcionariosDoSetor = funcionarios.filter(
+  const setoresComCobertura = setoresList.map((setor) => {
+    const funcionariosDoSetor = funcionariosList.filter(
       (funcionario) => funcionario.setor === setor.id,
     ).length;
 

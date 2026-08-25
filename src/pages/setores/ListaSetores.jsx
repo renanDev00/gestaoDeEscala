@@ -1,8 +1,11 @@
 import { useState } from "react";
 import setores from "../../models/setores";
+import { initializeStorage, saveToStorage } from "../../utils/storage";
 
 export default function ListaSetores() {
-  const [setoresList, setSetoresList] = useState(setores);
+  const [setoresList, setSetoresList] = useState(() =>
+    initializeStorage("setores", setores),
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -53,18 +56,19 @@ export default function ListaSetores() {
       return;
     }
 
+    let newList;
     if (editingId !== null) {
-      setSetoresList((prev) =>
-        prev.map((item) =>
-          item.id === editingId ? { ...item, ...payload } : item,
-        ),
+      newList = setoresList.map((item) =>
+        item.id === editingId ? { ...item, ...payload } : item,
       );
     } else {
       const nextId =
         setoresList.reduce((max, setor) => Math.max(max, setor.id), 0) + 1;
-      setSetoresList((prev) => [...prev, { id: nextId, ...payload }]);
+      newList = [...setoresList, { id: nextId, ...payload }];
     }
 
+    setSetoresList(newList);
+    saveToStorage("setores", newList);
     setIsModalOpen(false);
     setFormValues({
       nome: "",
@@ -76,7 +80,9 @@ export default function ListaSetores() {
   };
 
   const handleDelete = (setorId) => {
-    setSetoresList((prev) => prev.filter((item) => item.id !== setorId));
+    const newList = setoresList.filter((item) => item.id !== setorId);
+    setSetoresList(newList);
+    saveToStorage("setores", newList);
   };
 
   return (

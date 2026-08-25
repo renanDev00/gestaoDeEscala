@@ -1,8 +1,11 @@
 import { useState } from "react";
 import turnos from "../../models/turnos";
+import { initializeStorage, saveToStorage } from "../../utils/storage";
 
 export default function ListaTurnos() {
-  const [turnosList, setTurnosList] = useState(turnos);
+  const [turnosList, setTurnosList] = useState(() =>
+    initializeStorage("turnos", turnos),
+  );
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -65,18 +68,19 @@ export default function ListaTurnos() {
       return;
     }
 
+    let newList;
     if (editingId !== null) {
-      setTurnosList((prev) =>
-        prev.map((item) =>
-          item.id === editingId ? { ...item, ...payload } : item,
-        ),
+      newList = turnosList.map((item) =>
+        item.id === editingId ? { ...item, ...payload } : item,
       );
     } else {
       const nextId =
         turnosList.reduce((max, turno) => Math.max(max, turno.id), 0) + 1;
-      setTurnosList((prev) => [...prev, { id: nextId, ...payload }]);
+      newList = [...turnosList, { id: nextId, ...payload }];
     }
 
+    setTurnosList(newList);
+    saveToStorage("turnos", newList);
     setIsModalOpen(false);
     setFormValues({
       nome: "",
@@ -91,7 +95,9 @@ export default function ListaTurnos() {
   };
 
   const handleDelete = (turnoId) => {
-    setTurnosList((prev) => prev.filter((item) => item.id !== turnoId));
+    const newList = turnosList.filter((item) => item.id !== turnoId);
+    setTurnosList(newList);
+    saveToStorage("turnos", newList);
   };
 
   return (

@@ -3,6 +3,7 @@ import funcionarios from "../../models/funcionarios";
 import turnos from "../../models/turnos";
 import setores from "../../models/setores";
 import grupoDom from "../../models/grupoDom";
+import { initializeStorage, saveToStorage } from "../../utils/storage";
 
 const diasSemana = {
   1: "Segunda-feira",
@@ -16,7 +17,9 @@ const diasSemana = {
 
 function ListaFuncionarios() {
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [funcionariosList, setFuncionariosList] = useState(funcionarios);
+  const [funcionariosList, setFuncionariosList] = useState(() =>
+    initializeStorage("funcionarios", funcionarios),
+  );
   const [funcionarioForm, setFuncionarioForm] = useState({
     nome: "",
     folga: "",
@@ -69,24 +72,27 @@ function ListaFuncionarios() {
       return;
     }
 
+    let newList;
     if (funcionarioEditando) {
-      setFuncionariosList((prev) =>
-        prev.map((item) =>
-          item.nome === funcionarioEditando ? { ...item, ...payload } : item,
-        ),
+      newList = funcionariosList.map((item) =>
+        item.nome === funcionarioEditando ? { ...item, ...payload } : item,
       );
     } else {
-      setFuncionariosList((prev) => [...prev, payload]);
+      newList = [...funcionariosList, payload];
     }
 
+    setFuncionariosList(newList);
+    saveToStorage("funcionarios", newList);
     setIsModalOpen(false);
     resetFuncionarioForm();
   };
 
   const handleDeleteFuncionario = (funcionario) => {
-    setFuncionariosList((prev) =>
-      prev.filter((item) => item.nome !== funcionario.nome),
+    const newList = funcionariosList.filter(
+      (item) => item.nome !== funcionario.nome,
     );
+    setFuncionariosList(newList);
+    saveToStorage("funcionarios", newList);
   };
 
   return (
