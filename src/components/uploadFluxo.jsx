@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import * as XLSX from "xlsx";
-import fluxo, { atualizarFluxo, limparFluxo } from "../models/fluxo";
+import { supabase } from "../lib/supabase";
 
 const getColorPorValor = (valor, min, max) => {
   if (
@@ -34,7 +34,32 @@ const getHoraEmMinutos = (hora = "") => {
 };
 
 function UploadFluxo() {
-  const [diasSemana, setDiasSemana] = useState(() => [...fluxo]);
+  const [diasSemana, setDiasSemana] = useState([]);
+  const [fluxoId, setFluxoId] = useState(null);
+
+  useEffect(() => {
+    carregarFluxo();
+  }, []);
+
+  const carregarFluxo = async () => {
+    const { data, error } = await supabase.from("fluxos").select("*").limit(1);
+    if (!error && data && data.length > 0) {
+      setDiasSemana(data[0].dados || []);
+      setFluxoId(data[0].id);
+    }
+  };
+
+  const salvarFluxoSupabase = async (dadosNovos) => {
+    if (fluxoId) {
+      await supabase.from("fluxos").update({ dados: dadosNovos }).eq("id", fluxoId);
+    } else {
+      const { data } = await supabase.from("fluxos").insert([{ dados: dadosNovos }]).select();
+      if (data && data.length > 0) {
+        setFluxoId(data[0].id);
+      }
+    }
+    setDiasSemana(dadosNovos);
+  };
 
   const horasDisponiveis = [
     ...new Set(
@@ -73,8 +98,7 @@ function UploadFluxo() {
 
     const isExcel = /\.(xlsx|xls)$/i.test(file.name);
     if (!isExcel) {
-      limparFluxo();
-      setDiasSemana([]);
+      salvarFluxoSupabase([]);
       return;
     }
 
@@ -111,11 +135,9 @@ function UploadFluxo() {
         });
 
         const dados = Object.values(agrupado);
-        atualizarFluxo(dados);
-        setDiasSemana(dados);
+        salvarFluxoSupabase(dados);
       } catch {
-        limparFluxo();
-        setDiasSemana([]);
+        salvarFluxoSupabase([]);
       }
     };
 

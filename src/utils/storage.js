@@ -7,7 +7,7 @@
 export const initializeStorage = (key, defaultData) => {
   const stored = localStorage.getItem(key);
 
-  if (!stored) {
+  if (stored === null) {
     localStorage.setItem(key, JSON.stringify(defaultData));
     return defaultData;
   }

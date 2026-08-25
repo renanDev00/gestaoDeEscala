@@ -1,19 +1,20 @@
-import funcionarios from "../../models/funcionarios";
-import setores from "../../models/setores";
-import turnos from "../../models/turnos";
-import { getFromStorage } from "../../utils/storage";
+import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaRelatorios() {
-  const funcionariosList = getFromStorage("funcionarios") || funcionarios;
-  const setoresList = getFromStorage("setores") || setores;
-  const turnosList = getFromStorage("turnos") || turnos;
+  const { data: funcionariosList, loading: fLoading } = useSupabase("funcionarios");
+  const { data: setoresList, loading: sLoading } = useSupabase("setores");
+  const { data: turnosList, loading: tLoading } = useSupabase("turnos");
+
+  if (fLoading || sLoading || tLoading) {
+    return <div style={{ padding: "20px" }}>Carregando dados do relatório...</div>;
+  }
 
   const totalFuncionarios = funcionariosList.length;
   const totalSetores = setoresList.length;
   const totalTurnos = turnosList.length;
 
   const coberturaMinima = setoresList.reduce(
-    (total, setor) => total + setor.minimoFuncionarios,
+    (total, setor) => total + (setor.min_pessoas || 0),
     0,
   );
 
@@ -25,22 +26,22 @@ export default function ListaRelatorios() {
     .map((turno) => ({
       nome: turno.nome,
       total: funcionariosList.filter(
-        (funcionario) => funcionario.turno === turno.id,
+        (funcionario) => funcionario.turno_id === turno.id,
       ).length,
     }))
     .sort((a, b) => b.total - a.total)[0];
 
   const setoresComCobertura = setoresList.map((setor) => {
     const funcionariosDoSetor = funcionariosList.filter(
-      (funcionario) => funcionario.setor === setor.id,
+      (funcionario) => funcionario.setor_id === setor.id,
     ).length;
 
     return {
       nome: setor.nome,
       ocupacao: funcionariosDoSetor,
-      minimo: setor.minimoFuncionarios,
+      minimo: setor.min_pessoas,
       status:
-        funcionariosDoSetor >= setor.minimoFuncionarios
+        funcionariosDoSetor >= setor.min_pessoas
           ? "Atende ao mínimo"
           : "Abaixo do mínimo",
     };

@@ -1,9 +1,5 @@
 import { useState } from "react";
-import funcionarios from "../../models/funcionarios";
-import turnos from "../../models/turnos";
-import setores from "../../models/setores";
-import grupoDom from "../../models/grupoDom";
-import { initializeStorage, saveToStorage } from "../../utils/storage";
+import { useSupabase } from "../../hooks/useSupabase";
 
 const diasSemana = {
   1: "Segunda-feira",
@@ -16,10 +12,10 @@ const diasSemana = {
 };
 
 function ListaFuncionarios() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [funcionariosList, setFuncionariosList] = useState(() =>
-    initializeStorage("funcionarios", funcionarios),
-  );
+  const { data: funcionariosList, loading: fLoading, add, update, remove } = useSupabase("funcionarios");
+  const { data: turnosList, loading: tLoading } = useSupabase("turnos");
+  const { data: setoresList, loading: sLoading } = useSupabase("setores");
+  const { data: grupoDomList, loading: gLoading } = useSupabase("grupo_domingo");
   const [funcionarioForm, setFuncionarioForm] = useState({
     nome: "",
     folga: "",
@@ -28,6 +24,7 @@ function ListaFuncionarios() {
     grupoDom: "",
   });
   const [funcionarioEditando, setFuncionarioEditando] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const resetFuncionarioForm = () => {
     setFuncionarioForm({
@@ -42,13 +39,13 @@ function ListaFuncionarios() {
 
   const openFuncionarioModal = (funcionario = null) => {
     if (funcionario) {
-      setFuncionarioEditando(funcionario.nome);
+      setFuncionarioEditando(funcionario.id);
       setFuncionarioForm({
         nome: funcionario.nome,
-        folga: funcionario.folga,
-        setor: String(funcionario.setor),
-        turno: String(funcionario.turno),
-        grupoDom: String(funcionario.grupoDom),
+        folga: String(funcionario.dia_folga || ""),
+        setor: String(funcionario.setor_id || ""),
+        turno: String(funcionario.turno_id || ""),
+        grupoDom: String(funcionario.grupo_domingo_id || ""),
       });
     } else {
       resetFuncionarioForm();
@@ -57,43 +54,40 @@ function ListaFuncionarios() {
     setIsModalOpen(true);
   };
 
-  const handleFuncionarioSubmit = (e) => {
+  const handleFuncionarioSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
       nome: funcionarioForm.nome.trim(),
-      folga: Number(funcionarioForm.folga),
-      setor: Number(funcionarioForm.setor),
-      turno: Number(funcionarioForm.turno),
-      grupoDom: Number(funcionarioForm.grupoDom),
+      dia_folga: funcionarioForm.folga || null,
+      setor_id: funcionarioForm.setor || null,
+      turno_id: funcionarioForm.turno || null,
+      grupo_domingo_id: funcionarioForm.grupoDom || null,
     };
 
-    if (!payload.nome || !payload.folga || !payload.setor || !payload.turno) {
+    if (!payload.nome || !payload.dia_folga || !payload.setor_id || !payload.turno_id) {
       return;
     }
 
-    let newList;
     if (funcionarioEditando) {
-      newList = funcionariosList.map((item) =>
-        item.nome === funcionarioEditando ? { ...item, ...payload } : item,
-      );
+      await update(funcionarioEditando, payload);
     } else {
-      newList = [...funcionariosList, payload];
+      await add(payload);
     }
 
-    setFuncionariosList(newList);
-    saveToStorage("funcionarios", newList);
     setIsModalOpen(false);
     resetFuncionarioForm();
   };
 
-  const handleDeleteFuncionario = (funcionario) => {
-    const newList = funcionariosList.filter(
-      (item) => item.nome !== funcionario.nome,
-    );
-    setFuncionariosList(newList);
-    saveToStorage("funcionarios", newList);
+  const handleDeleteFuncionario = async (funcionario) => {
+    if (window.confirm("Tem certeza que deseja excluir?")) {
+      await remove(funcionario.id);
+    }
   };
+
+  if (fLoading || tLoading || sLoading || gLoading) {
+    return <div style={{ padding: "20px" }}>Carregando dados...</div>;
+  }
 
   return (
     <>
@@ -126,20 +120,20 @@ function ListaFuncionarios() {
             </thead>
             <tbody>
               {funcionariosList.map((funcionario) => (
-                <tr key={funcionario.nome}>
+                <tr key={funcionario.id}>
                   <td>{funcionario.nome}</td>
                   <td>
-                    {setores[funcionario.setor - 1]?.nome ||
+                    {setoresList.find((s) => s.id === funcionario.setor_id)?.nome ||
                       "Setor não encontrado"}
                   </td>
                   <td>
-                    {turnos[funcionario.turno - 1]?.nome ||
+                    {turnosList.find((t) => t.id === funcionario.turno_id)?.nome ||
                       "Turno não encontrado"}
                   </td>
                   <td>
-                    {diasSemana[funcionario.folga] || "Dia não encontrado"}
+                    {diasSemana[funcionario.dia_folga] || "Dia não encontrado"}
                   </td>
-                  <td>{grupoDom[funcionario.grupoDom - 1]?.nome || "-"}</td>
+                  <td>{grupoDomList.find((g) => g.id === funcionario.grupo_domingo_id)?.nome || "-"}</td>
                   <td className="actions">
                     <button
                       className="btn edit"
@@ -237,7 +231,7 @@ function ListaFuncionarios() {
                   }
                 >
                   <option value="">Selecione o setor</option>
-                  {setores.map((setor) => (
+                  {setoresList.map((setor) => (
                     <option key={setor.id} value={setor.id}>
                       {setor.nome}
                     </option>
@@ -256,7 +250,7 @@ function ListaFuncionarios() {
                   }
                 >
                   <option value="">Selecione o turno</option>
-                  {turnos.map((turno) => (
+                  {turnosList.map((turno) => (
                     <option key={turno.id} value={turno.id}>
                       {turno.nome}
                     </option>
@@ -275,7 +269,7 @@ function ListaFuncionarios() {
                   }
                 >
                   <option value="">Selecione o grupo</option>
-                  {grupoDom.map((grupo) => (
+                  {grupoDomList.map((grupo) => (
                     <option key={grupo.id} value={grupo.id}>
                       {grupo.nome}
                     </option>

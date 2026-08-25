@@ -1,5 +1,7 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import "./App.css";
+import { supabase } from "./lib/supabase";
+import Login from "./pages/Login";
 import FuncionarioIndex from "./pages/funcionarios/FuncionarioIndex";
 import SetoresIndex from "./pages/setores/SetoresIndex";
 import TurnosIndex from "./pages/turnos/TurnosIndex";
@@ -9,6 +11,27 @@ import ConfiguracoesIndex from "./pages/configuracoes/ConfiguracoesIndex";
 function App() {
   const [page, setPage] = useState("funcionarios");
   const [subPage, setSubPage] = useState("resumo");
+  const [session, setSession] = useState(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setIsCheckingAuth(false);
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const goTo = (p) => (e) => {
     e.preventDefault();
@@ -28,6 +51,18 @@ function App() {
     relatorios: ["📊 Zone", "📅 Escala Semanal"],
     configuracoes: ["Fluxo"],
   };
+
+  if (isCheckingAuth) {
+    return (
+      <div style={{ display: "grid", placeItems: "center", minHeight: "100vh", background: "var(--surface-soft)", color: "var(--orange-500)", fontWeight: "bold" }}>
+        Carregando sistema...
+      </div>
+    );
+  }
+
+  if (!session) {
+    return <Login onLogin={setSession} />;
+  }
 
   return (
     <div className="dashboard-shell">
@@ -89,7 +124,7 @@ function App() {
             <strong>Admin</strong>
             <span>Perfil</span>
           </div>
-          <button type="button" className="logout-button">
+          <button type="button" className="logout-button" onClick={handleLogout}>
             Sair
           </button>
         </div>

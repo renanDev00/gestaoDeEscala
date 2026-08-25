@@ -1,11 +1,8 @@
 import { useState } from "react";
-import turnos from "../../models/turnos";
-import { initializeStorage, saveToStorage } from "../../utils/storage";
+import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaTurnos() {
-  const [turnosList, setTurnosList] = useState(() =>
-    initializeStorage("turnos", turnos),
-  );
+  const { data: turnosList, loading, add, update, remove } = useSupabase("turnos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -36,12 +33,12 @@ export default function ListaTurnos() {
     setEditingId(turno.id);
     setFormValues({
       nome: turno.nome,
-      horarioInicio: turno.horarioInicio,
-      horarioFim: turno.horarioFim,
-      intervaloInicio: turno.intervaloInicio,
-      intervaloFim: turno.intervaloFim,
-      descansoInicio: turno.descansoinicio || "",
-      descansoFim: turno.descansoFim || "",
+      horarioInicio: turno.horario_entrada || "",
+      horarioFim: turno.horario_saida || "",
+      intervaloInicio: turno.inicio_intervalo || "",
+      intervaloFim: turno.fim_intervalo || "",
+      descansoInicio: turno.inicio_descanso || "",
+      descansoFim: turno.fim_descanso || "",
     });
     setIsModalOpen(true);
   };
@@ -51,36 +48,29 @@ export default function ListaTurnos() {
     setFormValues((p) => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
       nome: formValues.nome.trim(),
-      horarioInicio: formValues.horarioInicio,
-      horarioFim: formValues.horarioFim,
-      intervaloInicio: formValues.intervaloInicio,
-      intervaloFim: formValues.intervaloFim,
-      descansoinicio: formValues.descansoInicio,
-      descansoFim: formValues.descansoFim,
+      horario_entrada: formValues.horarioInicio || null,
+      horario_saida: formValues.horarioFim || null,
+      inicio_intervalo: formValues.intervaloInicio || null,
+      fim_intervalo: formValues.intervaloFim || null,
+      inicio_descanso: formValues.descansoInicio || null,
+      fim_descanso: formValues.descansoFim || null,
     };
 
-    if (!payload.nome || !payload.horarioInicio || !payload.horarioFim) {
+    if (!payload.nome || !payload.horario_entrada || !payload.horario_saida) {
       return;
     }
 
-    let newList;
     if (editingId !== null) {
-      newList = turnosList.map((item) =>
-        item.id === editingId ? { ...item, ...payload } : item,
-      );
+      await update(editingId, payload);
     } else {
-      const nextId =
-        turnosList.reduce((max, turno) => Math.max(max, turno.id), 0) + 1;
-      newList = [...turnosList, { id: nextId, ...payload }];
+      await add(payload);
     }
 
-    setTurnosList(newList);
-    saveToStorage("turnos", newList);
     setIsModalOpen(false);
     setFormValues({
       nome: "",
@@ -94,11 +84,13 @@ export default function ListaTurnos() {
     setEditingId(null);
   };
 
-  const handleDelete = (turnoId) => {
-    const newList = turnosList.filter((item) => item.id !== turnoId);
-    setTurnosList(newList);
-    saveToStorage("turnos", newList);
+  const handleDelete = async (turnoId) => {
+    if (window.confirm("Tem certeza que deseja excluir?")) {
+      await remove(turnoId);
+    }
   };
+
+  if (loading) return <div style={{ padding: "20px" }}>Carregando turnos...</div>;
 
   return (
     <section className="table-panel">
@@ -128,15 +120,15 @@ export default function ListaTurnos() {
             {turnosList.map((t) => (
               <tr key={t.id}>
                 <td>{t.nome}</td>
-                <td>{t.horarioInicio}</td>
-                <td>{t.horarioFim}</td>
+                <td>{t.horario_entrada?.substring(0, 5)}</td>
+                <td>{t.horario_saida?.substring(0, 5)}</td>
                 <td>
-                  {t.intervaloInicio}-{t.intervaloFim}
+                  {t.inicio_intervalo ? t.inicio_intervalo.substring(0, 5) : ""}-{t.fim_intervalo ? t.fim_intervalo.substring(0, 5) : ""}
                 </td>
 
                 <td>
-                  {t.descansoInicio || t.descansoinicio || "-"}-
-                  {t.descansoFim || "-"}
+                  {t.inicio_descanso ? t.inicio_descanso.substring(0, 5) : "-"}-
+                  {t.fim_descanso ? t.fim_descanso.substring(0, 5) : "-"}
                 </td>
 
                 <td className="actions">

@@ -1,11 +1,8 @@
 import { useState } from "react";
-import setores from "../../models/setores";
-import { initializeStorage, saveToStorage } from "../../utils/storage";
+import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaSetores() {
-  const [setoresList, setSetoresList] = useState(() =>
-    initializeStorage("setores", setores),
-  );
+  const { data: setoresList, loading, add, update, remove } = useSupabase("setores");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -30,8 +27,8 @@ export default function ListaSetores() {
     setEditingId(setor.id);
     setFormValues({
       nome: setor.nome,
-      minimoFuncionarios: String(setor.minimoFuncionarios),
-      atividadePadrao: setor.atividadePadrao || "",
+      minimoFuncionarios: String(setor.min_pessoas || ""),
+      atividadePadrao: setor.atividade_padrao || "",
       cor: setor.cor || "#FF5733",
     });
     setIsModalOpen(true);
@@ -42,33 +39,26 @@ export default function ListaSetores() {
     setFormValues((p) => ({ ...p, [name]: value }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     const payload = {
       nome: formValues.nome.trim(),
-      minimoFuncionarios: Number(formValues.minimoFuncionarios),
-      atividadePadrao: formValues.atividadePadrao.trim(),
+      min_pessoas: Number(formValues.minimoFuncionarios),
+      atividade_padrao: formValues.atividadePadrao.trim(),
       cor: formValues.cor,
     };
 
-    if (!payload.nome || !payload.minimoFuncionarios) {
+    if (!payload.nome || !payload.min_pessoas) {
       return;
     }
 
-    let newList;
     if (editingId !== null) {
-      newList = setoresList.map((item) =>
-        item.id === editingId ? { ...item, ...payload } : item,
-      );
+      await update(editingId, payload);
     } else {
-      const nextId =
-        setoresList.reduce((max, setor) => Math.max(max, setor.id), 0) + 1;
-      newList = [...setoresList, { id: nextId, ...payload }];
+      await add(payload);
     }
 
-    setSetoresList(newList);
-    saveToStorage("setores", newList);
     setIsModalOpen(false);
     setFormValues({
       nome: "",
@@ -79,11 +69,13 @@ export default function ListaSetores() {
     setEditingId(null);
   };
 
-  const handleDelete = (setorId) => {
-    const newList = setoresList.filter((item) => item.id !== setorId);
-    setSetoresList(newList);
-    saveToStorage("setores", newList);
+  const handleDelete = async (setorId) => {
+    if (window.confirm("Tem certeza que deseja excluir?")) {
+      await remove(setorId);
+    }
   };
+
+  if (loading) return <div style={{ padding: "20px" }}>Carregando setores...</div>;
 
   return (
     <section className="table-panel">
@@ -112,10 +104,10 @@ export default function ListaSetores() {
           <tbody>
             {setoresList.map((s) => (
               <tr key={s.id}>
-                <td>{s.id}</td>
+                <td title={s.id}>{s.id.slice(0, 6)}...</td>
                 <td>{s.nome}</td>
-                <td>{s.minimoFuncionarios}</td>
-                <td>{s.atividadePadrao || "-"}</td>
+                <td>{s.min_pessoas}</td>
+                <td>{s.atividade_padrao || "-"}</td>
                 <td>
                   <span
                     style={{
