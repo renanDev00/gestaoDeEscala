@@ -18,7 +18,7 @@ export const atualizarFluxo = (novosDias = []) => {
 
   try {
     saveToStorage("fluxo", fluxo);
-  } catch (e) {
+  } catch {
     // silent
   }
 };
@@ -27,7 +27,7 @@ export const limparFluxo = () => {
   fluxo.length = 0;
   try {
     saveToStorage("fluxo", fluxo);
-  } catch (e) {
+  } catch {
     // silent
   }
 };

@@ -1,6 +1,6 @@
 import { useState, useRef } from "react";
 import { useSupabase } from "../../hooks/useSupabase";
-import { resolverDia, AUSENCIA_LABELS } from "../../utils/domingoUtils";
+import { resolverDia } from "../../utils/domingoUtils";
 
 const DIAS_SEMANA = {
   1: "Segunda-feira",
@@ -32,19 +32,33 @@ export default function ZoneRelatorio() {
   const [dataSelecionada, setDataSelecionada] = useState(today);
   const printRef = useRef(null);
 
-  const { data: funcionariosList, loading: fLoading } = useSupabase("funcionarios");
+  const { data: funcionariosList, loading: fLoading } =
+    useSupabase("funcionarios");
   const { data: setoresList, loading: sLoading } = useSupabase("setores");
   const { data: turnosList, loading: tLoading } = useSupabase("turnos");
-  const { data: grupoDomList, loading: gLoading } = useSupabase("grupo_domingo");
+  const { data: grupoDomList, loading: gLoading } =
+    useSupabase("grupo_domingo");
   const { data: ausenciasList, loading: aLoading } = useSupabase("ausencias");
-  const { data: mudancasList, loading: mLoading } = useSupabase("mudancas_turno_setor");
+  const { data: mudancasList, loading: mLoading } = useSupabase(
+    "mudancas_turno_setor",
+  );
   const { data: trocasList, loading: trLoading } = useSupabase("trocas_folga");
 
   const dataInicioGlobal = localStorage.getItem("data_inicio_domingo");
 
-  const handlePrint = () => { window.print(); };
+  const handlePrint = () => {
+    window.print();
+  };
 
-  if (fLoading || sLoading || tLoading || gLoading || aLoading || mLoading || trLoading) {
+  if (
+    fLoading ||
+    sLoading ||
+    tLoading ||
+    gLoading ||
+    aLoading ||
+    mLoading ||
+    trLoading
+  ) {
     return <div className="zone-loading">Carregando relatório...</div>;
   }
 
@@ -52,66 +66,85 @@ export default function ZoneRelatorio() {
   const diaSemanaNum = jsDayToBanco(dataSel.getDay());
   const diaSemanaLabel = DIAS_SEMANA[diaSemanaNum];
 
-  const ctx = { ausencias: ausenciasList, mudancas: mudancasList, trocas: trocasList, grupoDomList, dataInicioGlobal };
+  const ctx = {
+    ausencias: ausenciasList,
+    mudancas: mudancasList,
+    trocas: trocasList,
+    grupoDomList,
+    dataInicioGlobal,
+  };
 
   // Resolve o estado de cada funcionário para o dia
   const resolucoes = Object.fromEntries(
-    funcionariosList.map((f) => [f.id, resolverDia(f, dataSel, ctx)])
+    funcionariosList.map((f) => [f.id, resolverDia(f, dataSel, ctx)]),
   );
 
-  const funcionariosAtivos = funcionariosList.filter((f) => !resolucoes[f.id].folga && !resolucoes[f.id].ausente);
-  const funcionariosForaDia = funcionariosList.filter((f) => resolucoes[f.id].folga || resolucoes[f.id].ausente);
-  const totalAusentes = funcionariosList.filter((f) => resolucoes[f.id].ausente).length;
-  const totalFolga = funcionariosList.filter((f) => resolucoes[f.id].folga && !resolucoes[f.id].ausente).length;
+  const funcionariosAtivos = funcionariosList.filter(
+    (f) => !resolucoes[f.id].folga && !resolucoes[f.id].ausente,
+  );
+  const totalAusentes = funcionariosList.filter(
+    (f) => resolucoes[f.id].ausente,
+  ).length;
+  const totalFolga = funcionariosList.filter(
+    (f) => resolucoes[f.id].folga && !resolucoes[f.id].ausente,
+  ).length;
 
   const turnoMap = Object.fromEntries(turnosList.map((t) => [t.id, t]));
-  const setorMap = Object.fromEntries(setoresList.map((s) => [s.id, s]));
 
   // Agrupa por setor considerando mudanças de setor
-  const porSetor = setoresList.map((setor) => {
-    const funcionariosDoSetor = funcionariosAtivos.filter((f) => {
-      const res = resolucoes[f.id];
-      return String(res.setor_id || f.setor_id) === String(setor.id);
-    });
+  const porSetor = setoresList
+    .map((setor) => {
+      const funcionariosDoSetor = funcionariosAtivos.filter((f) => {
+        const res = resolucoes[f.id];
+        return String(res.setor_id || f.setor_id) === String(setor.id);
+      });
 
-    const contagemTurnos = {};
-    for (const f of funcionariosDoSetor) {
-      const res = resolucoes[f.id];
-      const turnoId = String(res.turno_id || f.turno_id);
-      if (!contagemTurnos[turnoId]) {
-        const turno = turnoMap[turnoId];
-        contagemTurnos[turnoId] = {
-          nome: turno ? turno.nome : "Sem Turno",
-          horario_entrada: turno?.horario_entrada || "99:99",
-          qtd: 0,
-        };
+      const contagemTurnos = {};
+      for (const f of funcionariosDoSetor) {
+        const res = resolucoes[f.id];
+        const turnoId = String(res.turno_id || f.turno_id);
+        if (!contagemTurnos[turnoId]) {
+          const turno = turnoMap[turnoId];
+          contagemTurnos[turnoId] = {
+            nome: turno ? turno.nome : "Sem Turno",
+            horario_entrada: turno?.horario_entrada || "99:99",
+            qtd: 0,
+          };
+        }
+        contagemTurnos[turnoId].qtd += 1;
       }
-      contagemTurnos[turnoId].qtd += 1;
-    }
 
-    const resumoTurnos = Object.values(contagemTurnos)
-      .sort((a, b) => a.horario_entrada.localeCompare(b.horario_entrada))
-      .map((t) => `${t.qtd} ${t.nome}`)
-      .join(" · ");
+      const resumoTurnos = Object.values(contagemTurnos)
+        .sort((a, b) => a.horario_entrada.localeCompare(b.horario_entrada))
+        .map((t) => `${t.qtd} ${t.nome}`)
+        .join(" · ");
 
-    funcionariosDoSetor.sort((a, b) => {
-      const resA = resolucoes[a.id];
-      const resB = resolucoes[b.id];
-      const turnoA = turnoMap[resA.turno_id || a.turno_id];
-      const turnoB = turnoMap[resB.turno_id || b.turno_id];
-      const horaA = turnoA?.horario_entrada || "99:99";
-      const horaB = turnoB?.horario_entrada || "99:99";
-      return horaA.localeCompare(horaB);
-    });
+      funcionariosDoSetor.sort((a, b) => {
+        const resA = resolucoes[a.id];
+        const resB = resolucoes[b.id];
+        const turnoA = turnoMap[resA.turno_id || a.turno_id];
+        const turnoB = turnoMap[resB.turno_id || b.turno_id];
+        const horaA = turnoA?.horario_entrada || "99:99";
+        const horaB = turnoB?.horario_entrada || "99:99";
+        return horaA.localeCompare(horaB);
+      });
 
-    return { setor, total: funcionariosDoSetor.length, resumoTurnos, funcionarios: funcionariosDoSetor };
-  }).filter((g) => g.total > 0);
+      return {
+        setor,
+        total: funcionariosDoSetor.length,
+        resumoTurnos,
+        funcionarios: funcionariosDoSetor,
+      };
+    })
+    .filter((g) => g.total > 0);
 
   return (
     <>
       <div className="zone-controls no-print">
         <div className="zone-date-wrap">
-          <label htmlFor="zone-date-input" className="zone-date-label">Data do relatório</label>
+          <label htmlFor="zone-date-input" className="zone-date-label">
+            Data do relatório
+          </label>
           <input
             id="zone-date-input"
             type="date"
@@ -120,7 +153,12 @@ export default function ZoneRelatorio() {
             onChange={(e) => setDataSelecionada(e.target.value)}
           />
         </div>
-        <button type="button" className="zone-print-btn" onClick={handlePrint} aria-label="Imprimir relatório Zone">
+        <button
+          type="button"
+          className="zone-print-btn"
+          onClick={handlePrint}
+          aria-label="Imprimir relatório Zone"
+        >
           <svg viewBox="0 0 24 24" aria-hidden="true">
             <path d="M19 8H5a3 3 0 0 0-3 3v5h4v4h12v-4h4v-5a3 3 0 0 0-3-3zm-3 11H8v-5h8v5zm1-11H7V4h10v4zM8 13h2v2H8v-2z" />
           </svg>
@@ -132,7 +170,9 @@ export default function ZoneRelatorio() {
         <header className="zone-report-header">
           <div className="zone-report-title-block">
             <h2 className="zone-report-title">Zone</h2>
-            <span className="zone-report-date">{dataFormatada(dataSelecionada)}</span>
+            <span className="zone-report-date">
+              {dataFormatada(dataSelecionada)}
+            </span>
             <span className="zone-report-weekday">{diaSemanaLabel}</span>
           </div>
           <div className="zone-report-stats">
@@ -172,7 +212,9 @@ export default function ZoneRelatorio() {
                   <tr className="zone-table-sector-row">
                     <td colSpan={6}>
                       <span className="zone-sector-name">{setor.nome}</span>
-                      <span className="zone-sector-meta">{total} func. ({resumoTurnos})</span>
+                      <span className="zone-sector-meta">
+                        {total} func. ({resumoTurnos})
+                      </span>
                     </td>
                   </tr>
                   <tr className="zone-table-col-header">
@@ -190,11 +232,25 @@ export default function ZoneRelatorio() {
                     const turno = turnoMap[res.turno_id || f.turno_id];
                     if (!turno) return null;
                     return (
-                      <tr key={f.id} style={res.mudanca ? { background: "rgba(249,115,22,0.05)" } : {}}>
+                      <tr
+                        key={f.id}
+                        style={
+                          res.mudanca
+                            ? { background: "rgba(249,115,22,0.05)" }
+                            : {}
+                        }
+                      >
                         <td className="zone-td-name">
                           {f.nome}
                           {res.mudanca && (
-                            <span style={{ fontSize: "0.65rem", color: "var(--orange-500)", marginLeft: "6px", fontWeight: 700 }}>
+                            <span
+                              style={{
+                                fontSize: "0.65rem",
+                                color: "var(--orange-500)",
+                                marginLeft: "6px",
+                                fontWeight: 700,
+                              }}
+                            >
                               ✦ mudança
                             </span>
                           )}
@@ -204,12 +260,16 @@ export default function ZoneRelatorio() {
                         <td>{fmt(turno.horario_saida)}</td>
                         <td>
                           {fmt(turno.inicio_intervalo)}
-                          {turno.inicio_intervalo && turno.fim_intervalo ? " – " : ""}
+                          {turno.inicio_intervalo && turno.fim_intervalo
+                            ? " – "
+                            : ""}
                           {fmt(turno.fim_intervalo)}
                         </td>
                         <td>
                           {fmt(turno.inicio_descanso)}
-                          {turno.inicio_descanso && turno.fim_descanso ? " – " : ""}
+                          {turno.inicio_descanso && turno.fim_descanso
+                            ? " – "
+                            : ""}
                           {fmt(turno.fim_descanso)}
                         </td>
                       </tr>

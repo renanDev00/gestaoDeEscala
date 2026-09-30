@@ -3,11 +3,11 @@ import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 import { supabase } from "./lib/supabase";
 import Login from "./pages/Login";
-import FuncionarioIndex from "./pages/funcionarios/FuncionarioIndex";
-import SetoresIndex from "./pages/setores/SetoresIndex";
-import TurnosIndex from "./pages/turnos/TurnosIndex";
-import RelatoriosIndex from "./pages/relatorios/RelatoriosIndex";
-import ConfiguracoesIndex from "./pages/configuracoes/ConfiguracoesIndex";
+import FuncionarioIndex from "./modules/funcionarios";
+import SetoresIndex from "./modules/setores";
+import TurnosIndex from "./modules/turnos";
+import RelatoriosIndex from "./modules/relatorios";
+import ConfiguracoesIndex from "./modules/configuracoes";
 
 function App() {
   useTheme(); // aplica o tema salvo ao <html> na inicialização
@@ -41,7 +41,16 @@ function App() {
 
   if (isCheckingAuth) {
     return (
-      <div style={{ display: "grid", placeItems: "center", minHeight: "100vh", background: "var(--surface-soft)", color: "var(--orange-500)", fontWeight: "bold" }}>
+      <div
+        style={{
+          display: "grid",
+          placeItems: "center",
+          minHeight: "100vh",
+          background: "var(--surface-soft)",
+          color: "var(--orange-500)",
+          fontWeight: "bold",
+        }}
+      >
         Carregando sistema...
       </div>
     );
@@ -114,7 +123,11 @@ function App() {
               {session?.user?.email || "Usuário"}
             </strong>
           </div>
-          <button type="button" className="logout-button" onClick={handleLogout}>
+          <button
+            type="button"
+            className="logout-button"
+            onClick={handleLogout}
+          >
             Sair
           </button>
         </div>

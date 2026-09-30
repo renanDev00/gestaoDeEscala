@@ -33,27 +33,40 @@ const getHoraEmMinutos = (hora = "") => {
   return Number(horas) * 60 + Number(minutos);
 };
 
+async function carregarFluxo() {
+  const { data, error } = await supabase.from("fluxos").select("*").limit(1);
+  if (!error && data && data.length > 0) {
+    return { dados: data[0].dados || [], id: data[0].id };
+  }
+
+  return { dados: [], id: null };
+}
+
 function UploadFluxo() {
   const [diasSemana, setDiasSemana] = useState([]);
   const [fluxoId, setFluxoId] = useState(null);
 
   useEffect(() => {
-    carregarFluxo();
-  }, []);
+    const carregarDados = async () => {
+      const resultado = await carregarFluxo();
+      setDiasSemana(resultado.dados);
+      setFluxoId(resultado.id);
+    };
 
-  const carregarFluxo = async () => {
-    const { data, error } = await supabase.from("fluxos").select("*").limit(1);
-    if (!error && data && data.length > 0) {
-      setDiasSemana(data[0].dados || []);
-      setFluxoId(data[0].id);
-    }
-  };
+    carregarDados();
+  }, []);
 
   const salvarFluxoSupabase = async (dadosNovos) => {
     if (fluxoId) {
-      await supabase.from("fluxos").update({ dados: dadosNovos }).eq("id", fluxoId);
+      await supabase
+        .from("fluxos")
+        .update({ dados: dadosNovos })
+        .eq("id", fluxoId);
     } else {
-      const { data } = await supabase.from("fluxos").insert([{ dados: dadosNovos }]).select();
+      const { data } = await supabase
+        .from("fluxos")
+        .insert([{ dados: dadosNovos }])
+        .select();
       if (data && data.length > 0) {
         setFluxoId(data[0].id);
       }

@@ -22,12 +22,12 @@ const THEMES = [
 ];
 
 function ThemeSelector() {
-  const { theme, setTheme } = useTheme();
+  const { setTheme } = useTheme();
 
   const handleSelect = (id) => {
     if (id === "system") {
       const prefersDark = window.matchMedia(
-        "(prefers-color-scheme: dark)"
+        "(prefers-color-scheme: dark)",
       ).matches;
       setTheme(prefersDark ? "dark" : "light");
       // Salva "system" para identificar a opção visualmente
@@ -56,7 +56,11 @@ function ThemeSelector() {
         </p>
       </div>
 
-      <div className="theme-options" role="radiogroup" aria-label="Selecionar tema">
+      <div
+        className="theme-options"
+        role="radiogroup"
+        aria-label="Selecionar tema"
+      >
         {THEMES.map(({ id, label, previewClass, icon }) => {
           const isSelected = storedPref === id;
           return (
