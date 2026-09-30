@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTheme } from "./hooks/useTheme";
 import "./App.css";
 import { supabase } from "./lib/supabase";
 import Login from "./pages/Login";
@@ -9,8 +10,8 @@ import RelatoriosIndex from "./pages/relatorios/RelatoriosIndex";
 import ConfiguracoesIndex from "./pages/configuracoes/ConfiguracoesIndex";
 
 function App() {
+  useTheme(); // aplica o tema salvo ao <html> na inicialização
   const [page, setPage] = useState("funcionarios");
-  const [subPage, setSubPage] = useState("resumo");
   const [session, setSession] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -36,20 +37,6 @@ function App() {
   const goTo = (p) => (e) => {
     e.preventDefault();
     setPage(p);
-    setSubPage("resumo");
-  };
-
-  const subTabs = {
-    funcionarios: [
-      "Funcionários",
-      "🏖️ Férias / Afastamento",
-      "🔀 Mudança de Folga",
-      "🔄 Mudança de Turno/Setor",
-    ],
-    turnos: ["Turnos", "🗓️ Feriados / Eventos"],
-    setores: ["Setores"],
-    relatorios: ["📊 Zone", "📅 Escala Semanal"],
-    configuracoes: ["Fluxo"],
   };
 
   if (isCheckingAuth) {
@@ -119,10 +106,13 @@ function App() {
         </nav>
 
         <div className="user-box">
-          <div className="user-avatar">AS</div>
+          <div className="user-avatar">
+            {session?.user?.email?.slice(0, 2).toUpperCase() || "?"}
+          </div>
           <div className="user-meta">
-            <strong>Admin</strong>
-            <span>Perfil</span>
+            <strong style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>
+              {session?.user?.email || "Usuário"}
+            </strong>
           </div>
           <button type="button" className="logout-button" onClick={handleLogout}>
             Sair
@@ -131,41 +121,11 @@ function App() {
       </aside>
 
       <div className="main-panel">
-        {page === "funcionarios" && (
-          <FuncionarioIndex
-            subTabs={subTabs}
-            subPage={subPage}
-            setSubPage={setSubPage}
-          />
-        )}
-        {page === "setores" && (
-          <SetoresIndex
-            subTabs={subTabs}
-            subPage={subPage}
-            setSubPage={setSubPage}
-          />
-        )}
-        {page === "turnos" && (
-          <TurnosIndex
-            subTabs={subTabs}
-            subPage={subPage}
-            setSubPage={setSubPage}
-          />
-        )}
-        {page === "relatorios" && (
-          <RelatoriosIndex
-            subTabs={subTabs}
-            subPage={subPage}
-            setSubPage={setSubPage}
-          />
-        )}
-        {page === "configuracoes" && (
-          <ConfiguracoesIndex
-            subTabs={subTabs}
-            subPage={subPage}
-            setSubPage={setSubPage}
-          />
-        )}
+        {page === "funcionarios" && <FuncionarioIndex />}
+        {page === "setores" && <SetoresIndex />}
+        {page === "turnos" && <TurnosIndex />}
+        {page === "relatorios" && <RelatoriosIndex />}
+        {page === "configuracoes" && <ConfiguracoesIndex />}
       </div>
     </div>
   );

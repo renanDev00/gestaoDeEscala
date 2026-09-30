@@ -190,7 +190,7 @@ export default function ListaTurnos() {
                   type="text"
                   placeholder="Nome do turno"
                 />
-              </label>
+              </label><br />
               <label>
                 Horário Início
                 <input

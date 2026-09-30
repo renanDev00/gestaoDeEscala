@@ -810,3 +810,567 @@ td {
     grid-template-columns: 1fr;
   }
 }
+
+/* ============================================================
+   TEMA ESCURO — variáveis sobrescritas via html.dark
+   ============================================================ */
+html.dark {
+  --text-dark: #f1f5f9;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-accent: #fdba74;
+  --white: #1e293b;
+  --surface: #1e293b;
+  --surface-soft: #0f172a;
+  --border-soft: #334155;
+  --shadow-soft: rgba(0, 0, 0, 0.3);
+}
+
+html.dark body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+html.dark .dashboard-shell {
+  background: #0f172a;
+}
+
+html.dark .sidebar {
+  background: #1e293b;
+  border-right-color: #334155;
+}
+
+html.dark .main-panel {
+  background: #0f172a;
+}
+
+html.dark .topbar {
+  background: rgba(15, 23, 42, 0.96);
+  border-bottom-color: #334155;
+}
+
+html.dark .sub-nav {
+  background: rgba(15, 23, 42, 0.96);
+  border-bottom-color: #334155;
+}
+
+html.dark .flow-grid-table thead th {
+  background: rgba(15, 23, 42, 0.98);
+}
+
+html.dark .sticky-col {
+  background: rgba(30, 41, 59, 0.97);
+}
+
+html.dark .employee-form input,
+html.dark .employee-form select {
+  background: #1e293b;
+  color: #f1f5f9;
+  border-color: #334155;
+}
+
+html.dark .employee-form input::placeholder {
+  color: #64748b;
+}
+
+html.dark td {
+  color: #cbd5e1;
+}
+
+html.dark .search-box input {
+  color: #f1f5f9;
+}
+
+html.dark .search-box input::placeholder {
+  color: #64748b;
+}
+
+html.dark .modal-card {
+  background: #1e293b;
+  border-color: #334155;
+}
+
+html.dark .user-box {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+/* ============================================================
+   COMPONENTE — Seletor de Tema
+   ============================================================ */
+.theme-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 26px;
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  background: var(--surface);
+  margin-bottom: 20px;
+}
+
+.theme-section-header {
+  margin-bottom: 4px;
+}
+
+.theme-section-title {
+  margin: 0 0 4px;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.theme-section-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.theme-options {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.theme-option {
+  flex: 1;
+  min-width: 130px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 12px;
+  border: 2px solid var(--border-soft);
+  border-radius: 14px;
+  background: var(--surface-soft);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.theme-option:hover {
+  border-color: var(--orange-400);
+  color: var(--text-main);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px var(--shadow-soft);
+}
+
+.theme-option.selected {
+  border-color: var(--orange-500);
+  background: rgba(249, 115, 22, 0.07);
+  color: var(--orange-600);
+}
+
+.theme-option-preview {
+  width: 76px;
+  height: 46px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  position: relative;
+}
+
+.theme-preview-light {
+  width: 100%;
+  height: 100%;
+  background: #f8fafc;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+}
+
+.theme-preview-light::before {
+  content: "";
+  display: block;
+  height: 7px;
+  width: 50%;
+  border-radius: 3px;
+  background: #f97316;
+}
+
+.theme-preview-light::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 78%;
+  border-radius: 3px;
+  background: #e5e7eb;
+}
+
+.theme-preview-dark {
+  width: 100%;
+  height: 100%;
+  background: #1e293b;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 8px;
+}
+
+.theme-preview-dark::before {
+  content: "";
+  display: block;
+  height: 7px;
+  width: 50%;
+  border-radius: 3px;
+  background: #f97316;
+}
+
+.theme-preview-dark::after {
+  content: "";
+  display: block;
+  height: 4px;
+  width: 78%;
+  border-radius: 3px;
+  background: #334155;
+}
+
+.theme-preview-system {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(110deg, #f8fafc 50%, #1e293b 50%);
+}
+
+.theme-option-label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.theme-option-check {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: var(--orange-500);
+  color: #fff;
+  font-size: 0.65rem;
+  flex-shrink: 0;
+}
+
+/* ============================================================
+   ZONE — Relatório Diário
+   ============================================================ */
+
+/* ── Barra de controles ── */
+.zone-controls {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.zone-date-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.zone-date-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.zone-date-input {
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  padding: 9px 12px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--text-dark);
+  background: var(--white);
+  cursor: pointer;
+  transition: border-color 0.2s ease;
+}
+
+.zone-date-input:focus {
+  outline: none;
+  border-color: var(--orange-500);
+  box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.12);
+}
+
+.zone-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 18px;
+  border: none;
+  border-radius: 10px;
+  background: var(--orange-500);
+  color: #fff;
+  font: inherit;
+  font-size: 0.9rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.zone-print-btn:hover {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.zone-print-btn svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+  flex-shrink: 0;
+}
+
+/* ── Área do relatório ── */
+.zone-report {
+  background: var(--white);
+  border: 1px solid var(--border-soft);
+  border-radius: 16px;
+  padding: 28px;
+}
+
+/* ── Cabeçalho do relatório ── */
+.zone-report-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 2px solid var(--orange-500);
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+}
+
+.zone-report-title-block {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.zone-report-title {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--orange-500);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
+
+.zone-report-date {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-dark);
+}
+
+.zone-report-weekday {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+/* ── Estatísticas do cabeçalho ── */
+.zone-report-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--surface-soft);
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  padding: 10px 16px;
+}
+
+.zone-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  min-width: 44px;
+}
+
+.zone-stat strong {
+  font-size: 1.2rem;
+  font-weight: 800;
+  color: var(--text-dark);
+  line-height: 1;
+}
+
+.zone-stat small {
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.zone-stat--folga strong {
+  color: #b45309;
+}
+
+.zone-stat--folga small {
+  color: #b45309;
+}
+
+.zone-stat-divider {
+  width: 1px;
+  height: 28px;
+  background: var(--border-soft);
+  margin: 0 4px;
+}
+
+/* ── Bloco de setor ── */
+.zone-setor-block {
+  margin-bottom: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+/* ── Tabela Zone ── */
+.zone-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--border-soft);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.zone-table-sector-row td {
+  padding: 8px 14px;
+  background: rgba(249, 115, 22, 0.07);
+  border-bottom: 1px solid rgba(249, 115, 22, 0.15);
+}
+
+.zone-sector-name {
+  font-weight: 800;
+  font-size: 0.92rem;
+  color: var(--orange-600);
+  margin-right: 10px;
+}
+
+.zone-sector-meta {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.zone-table-col-header th {
+  padding: 7px 14px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--orange-500);
+  background: var(--surface-soft);
+  border-bottom: 1px solid var(--border-soft);
+  text-align: left;
+}
+
+.zone-table tbody tr {
+  border-bottom: 1px solid var(--border-soft);
+  transition: background 0.15s ease;
+}
+
+.zone-table tbody tr:last-child {
+  border-bottom: none;
+}
+
+.zone-table tbody tr:hover {
+  background: rgba(249, 115, 22, 0.03);
+}
+
+.zone-table td {
+  padding: 9px 14px;
+  font-size: 0.85rem;
+  color: var(--text-main);
+  border-bottom: none;
+}
+
+.zone-td-name {
+  font-weight: 600;
+  color: var(--text-dark) !important;
+}
+
+.zone-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 32px 0;
+}
+
+.zone-loading {
+  padding: 20px;
+  color: var(--text-muted);
+}
+
+/* ── Impressão ── */
+@media print {
+  @page {
+    size: landscape;
+    margin: 10mm;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .sidebar,
+  .topbar,
+  .sub-nav,
+  .main-nav,
+  .brand-wrap,
+  .user-box {
+    display: none !important;
+  }
+
+  .main-panel {
+    margin-left: 0 !important;
+  }
+
+  .content {
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  .zone-report {
+    border: none !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+  }
+
+  .zone-report-header {
+    border-bottom: 2px solid #f97316 !important;
+  }
+
+  .zone-table {
+    break-inside: avoid;
+    border: 1px solid #e5e7eb !important;
+  }
+
+  .zone-table th,
+  .zone-table td {
+    border: none !important;
+    border-bottom: 1px solid #e5e7eb !important;
+  }
+
+  .zone-table-sector-row td {
+    background-color: #f3f4f6 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .zone-setor-block {
+    break-inside: avoid;
+    margin-bottom: 20px !important;
+  }
+
+  body {
+    background: #fff !important;
+    color: #111 !important;
+  }
+}

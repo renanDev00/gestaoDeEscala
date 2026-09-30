@@ -1,6 +1,17 @@
+import { useState } from "react";
 import ListaRelatorios from "./ListaRelatorios";
+import ZoneRelatorio from "./ZoneRelatorio";
+import SemanalRelatorio from "./SemanalRelatorio";
 
-function RelatoriosIndex({ subTabs, subPage, setSubPage }) {
+const SUB_TABS = [
+  { key: "dashboard", label: "Dashboard" },
+  { key: "zone", label: "Zone" },
+  { key: "semanal", label: "Semanal" },
+];
+
+function RelatoriosIndex() {
+  const [subPage, setSubPage] = useState("dashboard");
+
   return (
     <div>
       <header className="topbar">
@@ -11,25 +22,22 @@ function RelatoriosIndex({ subTabs, subPage, setSubPage }) {
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">
-        {(subTabs["relatorios"] || ["Resumo"]).map((tab) => {
-          const tabKey = tab.toLowerCase().replace(/\s+/g, "-");
-          const isActive = subPage === tabKey;
-
-          return (
-            <button
-              key={tab}
-              type="button"
-              className={`sub-nav-item ${isActive ? "active" : ""}`}
-              onClick={() => setSubPage(tabKey)}
-            >
-              {tab}
-            </button>
-          );
-        })}
+        {SUB_TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            className={`sub-nav-item ${subPage === key ? "active" : ""}`}
+            onClick={() => setSubPage(key)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
       <main className="content">
-        <ListaRelatorios />
+        {subPage === "dashboard" && <ListaRelatorios />}
+        {subPage === "zone" && <ZoneRelatorio />}
+        {subPage === "semanal" && <SemanalRelatorio />}
       </main>
     </div>
   );

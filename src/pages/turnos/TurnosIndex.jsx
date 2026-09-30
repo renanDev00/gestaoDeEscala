@@ -1,6 +1,13 @@
+import { useState } from "react";
 import ListaTurnos from "./ListaTurnos";
 
-function TurnosIndex({ subTabs, subPage, setSubPage }) {
+const SUB_TABS = [
+  { key: "turnos", label: "Turnos" },
+];
+
+function TurnosIndex() {
+  const [subPage, setSubPage] = useState("turnos");
+
   return (
     <div>
       <header className="topbar">
@@ -11,25 +18,20 @@ function TurnosIndex({ subTabs, subPage, setSubPage }) {
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">
-        {(subTabs["turnos"] || ["Resumo"]).map((tab) => {
-          const tabKey = tab.toLowerCase().replace(/\s+/g, "-");
-          const isActive = subPage === tabKey;
-
-          return (
-            <button
-              key={tab}
-              type="button"
-              className={`sub-nav-item ${isActive ? "active" : ""}`}
-              onClick={() => setSubPage(tabKey)}
-            >
-              {tab}
-            </button>
-          );
-        })}
+        {SUB_TABS.map(({ key, label }) => (
+          <button
+            key={key}
+            type="button"
+            className={`sub-nav-item ${subPage === key ? "active" : ""}`}
+            onClick={() => setSubPage(key)}
+          >
+            {label}
+          </button>
+        ))}
       </nav>
 
       <main className="content">
-        <ListaTurnos />
+        {subPage === "turnos" && <ListaTurnos />}
       </main>
     </div>
   );
