@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { useSupabase } from "../../hooks/useSupabase";
 import { resolverDia } from "../../utils/domingoUtils";
+import { atribuirAtividadesFixas } from "../../utils/atividadeFixaUtils";
 
 const DIAS_SEMANA = {
   1: "Segunda-feira",
@@ -36,6 +37,14 @@ export default function ZoneRelatorio() {
     useSupabase("funcionarios");
   const { data: setoresList, loading: sLoading } = useSupabase("setores");
   const { data: turnosList, loading: tLoading } = useSupabase("turnos");
+  const { data: atividadesList, loading: atLoading } =
+    useSupabase("atividades");
+  const { data: funcionarioAtividadesList, loading: faLoading } = useSupabase(
+    "funcionarios_atividades",
+  );
+  const { data: atividadeRankingList, loading: arLoading } = useSupabase(
+    "atividade_fixa_ranking",
+  );
   const { data: grupoDomList, loading: gLoading } =
     useSupabase("grupo_domingo");
   const { data: ausenciasList, loading: aLoading } = useSupabase("ausencias");
@@ -54,6 +63,9 @@ export default function ZoneRelatorio() {
     fLoading ||
     sLoading ||
     tLoading ||
+    atLoading ||
+    faLoading ||
+    arLoading ||
     gLoading ||
     aLoading ||
     mLoading ||
@@ -89,7 +101,40 @@ export default function ZoneRelatorio() {
     (f) => resolucoes[f.id].folga && !resolucoes[f.id].ausente,
   ).length;
 
+  const atribuicoesFixas = atribuirAtividadesFixas({
+    atividades: atividadesList,
+    ranking: atividadeRankingList,
+    funcionariosDisponiveis: funcionariosAtivos,
+    resolucoes,
+  });
+
   const turnoMap = Object.fromEntries(turnosList.map((t) => [t.id, t]));
+  const atividadeMap = Object.fromEntries(
+    atividadesList.map((atividade) => [String(atividade.id), atividade]),
+  );
+  const nomesAtividadesFuncionario = (funcionario) => {
+    const idsVinculados = funcionarioAtividadesList
+      .filter(
+        (vinculo) => String(vinculo.funcionario_id) === String(funcionario.id),
+      )
+      .map((vinculo) => String(vinculo.atividade_id));
+    const ids =
+      idsVinculados.length > 0
+        ? idsVinculados
+        : funcionario.atividade_id
+          ? [String(funcionario.atividade_id)]
+          : [];
+
+    const nomesVinculados = ids.map((id) => atividadeMap[id]?.nome);
+    const nomesFixos = (atribuicoesFixas.get(String(funcionario.id)) || []).map(
+      (atividade) => atividade.nome,
+    );
+    return (
+      [...new Set([...nomesVinculados, ...nomesFixos].filter(Boolean))].join(
+        ", ",
+      ) || "-"
+    );
+  };
 
   // Agrupa por setor considerando mudanças de setor
   const porSetor = setoresList
@@ -210,7 +255,7 @@ export default function ZoneRelatorio() {
               <table className="zone-table">
                 <thead>
                   <tr className="zone-table-sector-row">
-                    <td colSpan={6}>
+                    <td colSpan={7}>
                       <span className="zone-sector-name">{setor.nome}</span>
                       <span className="zone-sector-meta">
                         {total} func. ({resumoTurnos})
@@ -220,6 +265,7 @@ export default function ZoneRelatorio() {
                   <tr className="zone-table-col-header">
                     <th>Nome</th>
                     <th>Turno</th>
+                    <th>Atividade</th>
                     <th>Entrada</th>
                     <th>Saída</th>
                     <th>Intervalo</th>
@@ -256,6 +302,7 @@ export default function ZoneRelatorio() {
                           )}
                         </td>
                         <td>{turno.nome}</td>
+                        <td>{nomesAtividadesFuncionario(f)}</td>
                         <td>{fmt(turno.horario_entrada)}</td>
                         <td>{fmt(turno.horario_saida)}</td>
                         <td>

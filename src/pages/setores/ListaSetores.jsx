@@ -2,7 +2,13 @@ import { useState } from "react";
 import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaSetores() {
-  const { data: setoresList, loading, add, update, remove } = useSupabase("setores");
+  const {
+    data: setoresList,
+    loading,
+    add,
+    update,
+    remove,
+  } = useSupabase("setores");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -75,7 +81,8 @@ export default function ListaSetores() {
     }
   };
 
-  if (loading) return <div style={{ padding: "20px" }}>Carregando setores...</div>;
+  if (loading)
+    return <div style={{ padding: "20px" }}>Carregando setores...</div>;
 
   return (
     <section className="table-panel">
@@ -93,7 +100,6 @@ export default function ListaSetores() {
         <table>
           <thead>
             <tr>
-              <th>ID</th>
               <th>Nome</th>
               <th>Mínimo</th>
               <th>Atividade</th>
@@ -104,7 +110,6 @@ export default function ListaSetores() {
           <tbody>
             {setoresList.map((s) => (
               <tr key={s.id}>
-                <td title={s.id}>{s.id.slice(0, 6)}...</td>
                 <td>{s.nome}</td>
                 <td>{s.min_pessoas}</td>
                 <td>{s.atividade_padrao || "-"}</td>

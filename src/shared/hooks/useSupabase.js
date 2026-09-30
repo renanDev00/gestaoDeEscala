@@ -58,7 +58,7 @@ export function useSupabase(tableName) {
       .select();
     if (error) {
       console.error(`Erro ao adicionar em ${tableName}:`, error);
-      alert("Erro ao salvar no banco de dados.");
+      alert(`Erro ao salvar no banco de dados.\n\n${error.message}`);
       return null;
     }
     if (result && result.length > 0) {
@@ -76,7 +76,7 @@ export function useSupabase(tableName) {
       .select();
     if (error) {
       console.error(`Erro ao atualizar em ${tableName}:`, error);
-      alert("Erro ao atualizar no banco de dados.");
+      alert(`Erro ao atualizar no banco de dados.\n\n${error.message}`);
       return null;
     }
     if (result && result.length > 0) {
@@ -92,7 +92,7 @@ export function useSupabase(tableName) {
     const { error } = await supabase.from(tableName).delete().eq("id", id);
     if (error) {
       console.error(`Erro ao remover em ${tableName}:`, error);
-      alert("Erro ao remover do banco de dados.");
+      alert(`Erro ao remover do banco de dados.\n\n${error.message}`);
       return false;
     }
     setData((prev) => prev.filter((item) => item.id !== id));

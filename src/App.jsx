@@ -4,6 +4,7 @@ import "./App.css";
 import { supabase } from "./lib/supabase";
 import Login from "./pages/Login";
 import FuncionarioIndex from "./modules/funcionarios";
+import AtividadesIndex from "./modules/atividades";
 import SetoresIndex from "./modules/setores";
 import TurnosIndex from "./modules/turnos";
 import RelatoriosIndex from "./modules/relatorios";
@@ -93,6 +94,13 @@ function App() {
           </a>
           <a
             href="#"
+            onClick={goTo("atividades")}
+            className={page === "atividades" ? "active" : ""}
+          >
+            Atividades
+          </a>
+          <a
+            href="#"
             onClick={goTo("setores")}
             className={page === "setores" ? "active" : ""}
           >
@@ -135,6 +143,7 @@ function App() {
 
       <div className="main-panel">
         {page === "funcionarios" && <FuncionarioIndex />}
+        {page === "atividades" && <AtividadesIndex />}
         {page === "setores" && <SetoresIndex />}
         {page === "turnos" && <TurnosIndex />}
         {page === "relatorios" && <RelatoriosIndex />}
