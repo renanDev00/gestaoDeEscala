@@ -1,8 +1,15 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaTurnos() {
-  const { data: turnosList, loading, add, update, remove } = useSupabase("turnos");
+  const {
+    data: turnosList,
+    loading,
+    add,
+    update,
+    remove,
+  } = useSupabase("turnos");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [formValues, setFormValues] = useState({
@@ -90,7 +97,8 @@ export default function ListaTurnos() {
     }
   };
 
-  if (loading) return <div style={{ padding: "20px" }}>Carregando turnos...</div>;
+  if (loading)
+    return <div style={{ padding: "20px" }}>Carregando turnos...</div>;
 
   return (
     <section className="table-panel">
@@ -100,7 +108,8 @@ export default function ListaTurnos() {
           <input type="text" placeholder="Pesquisar turno" />
         </div>
         <button type="button" className="add-button" onClick={openAddModal}>
-          + Adicionar
+          <Plus size={16} aria-hidden="true" />
+          Adicionar
         </button>
       </div>
 
@@ -123,7 +132,8 @@ export default function ListaTurnos() {
                 <td>{t.horario_entrada?.substring(0, 5)}</td>
                 <td>{t.horario_saida?.substring(0, 5)}</td>
                 <td>
-                  {t.inicio_intervalo ? t.inicio_intervalo.substring(0, 5) : ""}-{t.fim_intervalo ? t.fim_intervalo.substring(0, 5) : ""}
+                  {t.inicio_intervalo ? t.inicio_intervalo.substring(0, 5) : ""}
+                  -{t.fim_intervalo ? t.fim_intervalo.substring(0, 5) : ""}
                 </td>
 
                 <td>
@@ -190,7 +200,8 @@ export default function ListaTurnos() {
                   type="text"
                   placeholder="Nome do turno"
                 />
-              </label><br />
+              </label>
+              <br />
               <label>
                 Horário Início
                 <input

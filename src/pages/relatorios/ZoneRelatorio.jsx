@@ -1,7 +1,9 @@
 import { useState, useRef } from "react";
+import { Printer } from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 import { resolverDia } from "../../utils/domingoUtils";
 import { atribuirAtividadesFixas } from "../../utils/atividadeFixaUtils";
+import { distribuirIntervalos } from "../../utils/distribuirIntervalos";
 
 const DIAS_SEMANA = {
   1: "Segunda-feira",
@@ -37,6 +39,7 @@ export default function ZoneRelatorio() {
     useSupabase("funcionarios");
   const { data: setoresList, loading: sLoading } = useSupabase("setores");
   const { data: turnosList, loading: tLoading } = useSupabase("turnos");
+  const { data: fluxosList, loading: flLoading } = useSupabase("fluxos");
   const { data: atividadesList, loading: atLoading } =
     useSupabase("atividades");
   const { data: funcionarioAtividadesList, loading: faLoading } = useSupabase(
@@ -63,6 +66,7 @@ export default function ZoneRelatorio() {
     fLoading ||
     sLoading ||
     tLoading ||
+    flLoading ||
     atLoading ||
     faLoading ||
     arLoading ||
@@ -100,6 +104,31 @@ export default function ZoneRelatorio() {
   const totalFolga = funcionariosList.filter(
     (f) => resolucoes[f.id].folga && !resolucoes[f.id].ausente,
   ).length;
+
+  const funcionariosComIntervalos = distribuirIntervalos(
+    funcionariosAtivos.map((funcionario) => {
+      const resolucao = resolucoes[funcionario.id];
+      return {
+        ...funcionario,
+        setor: resolucao.setor_id || funcionario.setor_id,
+        turno: resolucao.turno_id || funcionario.turno_id,
+      };
+    }),
+    diaSemanaNum === 7,
+    diaSemanaLabel,
+    dataSel,
+    {
+      turnos: turnosList,
+      setores: setoresList,
+      fluxoData: fluxosList[0]?.dados || [],
+    },
+  );
+  const intervalosPorFuncionario = Object.fromEntries(
+    funcionariosComIntervalos.map((funcionario) => [
+      String(funcionario.id),
+      funcionario,
+    ]),
+  );
 
   const atribuicoesFixas = atribuirAtividadesFixas({
     atividades: atividadesList,
@@ -204,9 +233,7 @@ export default function ZoneRelatorio() {
           onClick={handlePrint}
           aria-label="Imprimir relatório Zone"
         >
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M19 8H5a3 3 0 0 0-3 3v5h4v4h12v-4h4v-5a3 3 0 0 0-3-3zm-3 11H8v-5h8v5zm1-11H7V4h10v4zM8 13h2v2H8v-2z" />
-          </svg>
+          <Printer size={17} aria-hidden="true" />
           Imprimir
         </button>
       </div>
@@ -306,18 +333,12 @@ export default function ZoneRelatorio() {
                         <td>{fmt(turno.horario_entrada)}</td>
                         <td>{fmt(turno.horario_saida)}</td>
                         <td>
-                          {fmt(turno.inicio_intervalo)}
-                          {turno.inicio_intervalo && turno.fim_intervalo
-                            ? " – "
-                            : ""}
-                          {fmt(turno.fim_intervalo)}
+                          {intervalosPorFuncionario[String(f.id)]
+                            ?.horarioAlmoco || "—"}
                         </td>
                         <td>
-                          {fmt(turno.inicio_descanso)}
-                          {turno.inicio_descanso && turno.fim_descanso
-                            ? " – "
-                            : ""}
-                          {fmt(turno.fim_descanso)}
+                          {intervalosPorFuncionario[String(f.id)]
+                            ?.horarioDescanso || "—"}
                         </td>
                       </tr>
                     );

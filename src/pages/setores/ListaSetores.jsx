@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 
 export default function ListaSetores() {
@@ -92,7 +93,8 @@ export default function ListaSetores() {
           <input type="text" placeholder="Pesquisar setor" />
         </div>
         <button type="button" className="add-button" onClick={openAddModal}>
-          + Adicionar
+          <Plus size={16} aria-hidden="true" />
+          Adicionar
         </button>
       </div>
 

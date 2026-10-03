@@ -2,6 +2,7 @@ import { useState } from "react";
 import ThemeSelector from "../../components/ThemeSelector";
 import UploadFluxo from "../../components/uploadFluxo";
 import GruposDomingo from "./GruposDomingo";
+import ReportModalActions from "../../components/ReportModalActions";
 
 const SUB_TABS = [
   { key: "configuracoes", label: "Configurações Gerais" },
@@ -19,6 +20,7 @@ function ConfiguracoesIndex() {
           <span className="eyebrow">Visão geral</span>
           <h1>Configurações</h1>
         </div>
+        <ReportModalActions />
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">

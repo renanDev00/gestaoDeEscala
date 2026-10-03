@@ -1,5 +1,14 @@
 import { useState, useEffect } from "react";
 import { useTheme } from "./hooks/useTheme";
+import {
+  Activity,
+  BarChart3,
+  CalendarDays,
+  Clock3,
+  LogOut,
+  Settings2,
+  UsersRound,
+} from "lucide-react";
 import "./App.css";
 import { supabase } from "./lib/supabase";
 import Login from "./pages/Login";
@@ -83,6 +92,7 @@ function App() {
             onClick={goTo("funcionarios")}
             className={page === "funcionarios" ? "active" : ""}
           >
+            <UsersRound size={17} aria-hidden="true" />
             Funcionários
           </a>
           <a
@@ -90,6 +100,7 @@ function App() {
             onClick={goTo("turnos")}
             className={page === "turnos" ? "active" : ""}
           >
+            <Clock3 size={17} aria-hidden="true" />
             Turnos
           </a>
           <a
@@ -97,6 +108,7 @@ function App() {
             onClick={goTo("atividades")}
             className={page === "atividades" ? "active" : ""}
           >
+            <Activity size={17} aria-hidden="true" />
             Atividades
           </a>
           <a
@@ -104,6 +116,7 @@ function App() {
             onClick={goTo("setores")}
             className={page === "setores" ? "active" : ""}
           >
+            <CalendarDays size={17} aria-hidden="true" />
             Setores
           </a>
           <a
@@ -111,6 +124,7 @@ function App() {
             onClick={goTo("relatorios")}
             className={page === "relatorios" ? "active" : ""}
           >
+            <BarChart3 size={17} aria-hidden="true" />
             Relatórios
           </a>
           <a
@@ -118,6 +132,7 @@ function App() {
             onClick={goTo("configuracoes")}
             className={page === "configuracoes" ? "active" : ""}
           >
+            <Settings2 size={17} aria-hidden="true" />
             Configurações
           </a>
         </nav>
@@ -136,6 +151,7 @@ function App() {
             className="logout-button"
             onClick={handleLogout}
           >
+            <LogOut size={15} aria-hidden="true" />
             Sair
           </button>
         </div>

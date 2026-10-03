@@ -89,6 +89,9 @@
 }
 
 .main-nav a {
+  display: flex;
+  align-items: center;
+  gap: 10px;
   color: var(--text-muted);
   text-decoration: none;
   padding: 10px 12px;
@@ -144,6 +147,9 @@
 }
 
 .logout-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   border: 1px solid rgba(220, 38, 38, 0.2);
   background: rgba(220, 38, 38, 0.04);
   color: #b91c1c;
@@ -180,6 +186,92 @@
   background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--border-soft);
+}
+
+.report-header-actions {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.report-header-button {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border: 1px solid var(--orange-600);
+  border-radius: 8px;
+  background: var(--orange-500);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition:
+    background 0.18s ease,
+    border-color 0.18s ease,
+    transform 0.18s ease;
+}
+
+.report-header-button:hover {
+  border-color: var(--orange-700);
+  background: var(--orange-600);
+  transform: translateY(-1px);
+}
+
+.report-header-button:focus-visible,
+.main-nav a:focus-visible,
+.logout-button:focus-visible {
+  outline: 3px solid var(--orange-300);
+  outline-offset: 2px;
+}
+
+.report-header-button svg,
+.main-nav svg,
+.logout-button svg,
+.add-button svg,
+.zone-print-btn svg {
+  flex: 0 0 auto;
+}
+
+.report-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(15, 23, 42, 0.55);
+  backdrop-filter: blur(3px);
+}
+
+.report-modal-shell {
+  width: min(1280px, 100%);
+  max-height: calc(100vh - 48px);
+  overflow: auto;
+  padding: 22px;
+  border: 1px solid var(--border-soft);
+  border-radius: 10px;
+  background: var(--white);
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
+}
+
+.report-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.report-modal-header h2 {
+  margin: 0;
+  color: var(--text-dark);
+  font-size: 1.25rem;
 }
 
 .sub-nav {
@@ -792,20 +884,33 @@ td {
   overflow-wrap: anywhere;
 }
 
-.activity-ranking-button {
-  padding: 7px 10px;
-  font-size: 0.8rem;
-  white-space: nowrap;
+.activity-ranking-inline {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+  padding-top: 4px;
 }
 
-.activity-ranking-modal {
-  width: min(900px, calc(100% - 32px));
+.activity-form-modal {
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
 }
 
-.activity-ranking-modal .modal-header p {
-  margin: 6px 0 0;
+.activity-ranking-intro h4,
+.activity-ranking-intro p {
+  margin: 0;
+}
+
+.activity-ranking-intro h4 {
+  color: var(--text-dark);
+  font-size: 0.95rem;
+}
+
+.activity-ranking-intro p {
+  margin-top: 4px;
   color: var(--text-muted);
-  font-size: 0.88rem;
+  font-size: 0.84rem;
 }
 
 .activity-ranking-columns {
@@ -931,6 +1036,24 @@ td {
     flex-direction: column;
     align-items: flex-start;
     padding: 20px 18px;
+  }
+
+  .report-header-actions {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .report-header-button {
+    flex: 1;
+  }
+
+  .report-modal-overlay {
+    padding: 10px;
+  }
+
+  .report-modal-shell {
+    max-height: calc(100vh - 20px);
+    padding: 14px;
   }
 
   .search-box {
@@ -1501,6 +1624,24 @@ html.dark .user-box {
     border: none !important;
     border-radius: 0 !important;
     padding: 0 !important;
+  }
+
+  .report-modal-overlay {
+    position: static !important;
+    display: block !important;
+    padding: 0 !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+  }
+
+  .report-modal-shell {
+    width: 100% !important;
+    max-height: none !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
   }
 
   .zone-report-header {

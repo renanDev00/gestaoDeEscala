@@ -1,9 +1,8 @@
 import { useState } from "react";
 import ListaTurnos from "./ListaTurnos";
+import ReportModalActions from "../../components/ReportModalActions";
 
-const SUB_TABS = [
-  { key: "turnos", label: "Turnos" },
-];
+const SUB_TABS = [{ key: "turnos", label: "Turnos" }];
 
 function TurnosIndex() {
   const [subPage, setSubPage] = useState("turnos");
@@ -15,6 +14,7 @@ function TurnosIndex() {
           <span className="eyebrow">Visão geral</span>
           <h1>Turnos</h1>
         </div>
+        <ReportModalActions />
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">
@@ -30,9 +30,7 @@ function TurnosIndex() {
         ))}
       </nav>
 
-      <main className="content">
-        {subPage === "turnos" && <ListaTurnos />}
-      </main>
+      <main className="content">{subPage === "turnos" && <ListaTurnos />}</main>
     </div>
   );
 }

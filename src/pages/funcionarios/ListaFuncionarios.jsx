@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 import { supabase } from "../../shared/lib/supabase";
 
@@ -255,7 +256,8 @@ function ListaFuncionarios() {
             className="add-button"
             onClick={() => openFuncionarioModal()}
           >
-            + Adicionar
+            <Plus size={16} aria-hidden="true" />
+            Adicionar
           </button>
         </div>
 

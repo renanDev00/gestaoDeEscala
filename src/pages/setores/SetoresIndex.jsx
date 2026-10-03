@@ -1,9 +1,8 @@
 import { useState } from "react";
 import ListaSetores from "./ListaSetores";
+import ReportModalActions from "../../components/ReportModalActions";
 
-const SUB_TABS = [
-  { key: "setores", label: "Setores" },
-];
+const SUB_TABS = [{ key: "setores", label: "Setores" }];
 
 function SetoresIndex() {
   const [subPage, setSubPage] = useState("setores");
@@ -15,6 +14,7 @@ function SetoresIndex() {
           <span className="eyebrow">Visão geral</span>
           <h1>Setores</h1>
         </div>
+        <ReportModalActions />
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">

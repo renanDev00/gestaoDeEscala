@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ListaAtividades from "../configuracoes/ListaAtividades";
+import ReportModalActions from "../../components/ReportModalActions";
 
 const SUB_TABS = [{ key: "atividades", label: "Atividades" }];
 
@@ -13,6 +14,7 @@ function AtividadesIndex() {
           <span className="eyebrow">Visão geral</span>
           <h1>Atividades</h1>
         </div>
+        <ReportModalActions />
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">

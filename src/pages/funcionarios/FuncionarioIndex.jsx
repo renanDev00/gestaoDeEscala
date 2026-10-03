@@ -3,6 +3,7 @@ import ListaFuncionarios from "./ListaFuncionarios";
 import Ausencias from "./Ausencias";
 import MudancasTurnoSetor from "./MudancasTurnoSetor";
 import TrocasFolga from "./TrocasFolga";
+import ReportModalActions from "../../components/ReportModalActions";
 
 const SUB_TABS = [
   { key: "funcionarios", label: "Funcionários" },
@@ -21,6 +22,7 @@ function FuncionarioIndex() {
           <span className="eyebrow">Visão geral</span>
           <h1>Funcionários</h1>
         </div>
+        <ReportModalActions />
       </header>
 
       <nav className="sub-nav" aria-label="Subnavegação">
@@ -47,4 +49,3 @@ function FuncionarioIndex() {
 }
 
 export default FuncionarioIndex;
-

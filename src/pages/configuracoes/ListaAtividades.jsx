@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Plus } from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 import { supabase } from "../../shared/lib/supabase";
 
@@ -33,7 +34,6 @@ export default function ListaAtividades() {
   });
   const [editingId, setEditingId] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [rankingAtividade, setRankingAtividade] = useState(null);
   const [rankingIds, setRankingIds] = useState([]);
   const [desconsideradosIds, setDesconsideradosIds] = useState([]);
   const [draggedFuncionarioId, setDraggedFuncionarioId] = useState(null);
@@ -48,18 +48,75 @@ export default function ListaAtividades() {
       tipo: "variavel",
     });
     setEditingId(null);
+    setRankingIds([]);
+    setDesconsideradosIds([]);
+  };
+
+  const getEligibleEmployees = (activityForm) =>
+    funcionariosList
+      .filter(
+        (funcionario) =>
+          activityForm.todos_setores ||
+          (activityForm.setor_id &&
+            String(funcionario.setor_id) === String(activityForm.setor_id)),
+      )
+      .sort((a, b) => a.nome.localeCompare(b.nome));
+
+  const updateRankingCandidates = (activityForm) => {
+    const eligibleIds = new Set(
+      getEligibleEmployees(activityForm).map((funcionario) =>
+        String(funcionario.id),
+      ),
+    );
+    const nextRanking = rankingIds.filter((id) => eligibleIds.has(id));
+    const nextExcluded = desconsideradosIds.filter((id) => eligibleIds.has(id));
+    const currentIds = new Set([...nextRanking, ...nextExcluded]);
+    const newIds = getEligibleEmployees(activityForm)
+      .map((funcionario) => String(funcionario.id))
+      .filter((id) => !currentIds.has(id));
+
+    setRankingIds([...nextRanking, ...newIds]);
+    setDesconsideradosIds(nextExcluded);
+  };
+
+  const initializeRanking = (activity, activityForm) => {
+    const eligibleIds = new Set(
+      getEligibleEmployees(activityForm).map((funcionario) =>
+        String(funcionario.id),
+      ),
+    );
+    const records = rankingSalvo
+      .filter((record) => String(record.atividade_id) === String(activity?.id))
+      .sort((a, b) => a.posicao - b.posicao);
+    const ranked = records
+      .filter((record) => !record.desconsiderado)
+      .map((record) => String(record.funcionario_id))
+      .filter((id) => eligibleIds.has(id));
+    const excluded = records
+      .filter((record) => record.desconsiderado)
+      .map((record) => String(record.funcionario_id))
+      .filter((id) => eligibleIds.has(id));
+    const knownIds = new Set([...ranked, ...excluded]);
+    const newIds = getEligibleEmployees(activityForm)
+      .map((funcionario) => String(funcionario.id))
+      .filter((id) => !knownIds.has(id));
+
+    setRankingIds([...ranked, ...newIds]);
+    setDesconsideradosIds(excluded);
   };
 
   const openModal = (atividade = null) => {
     if (atividade) {
       setEditingId(atividade.id);
-      setForm({
+      const activityForm = {
         setor_id: atividade.setor_id ? String(atividade.setor_id) : "",
         todos_setores: Boolean(atividade.todos_setores || !atividade.setor_id),
         nome: atividade.nome || "",
         descricao: atividade.descricao || "",
         tipo: atividade.tipo || "variavel",
-      });
+      };
+      setForm(activityForm);
+      initializeRanking(atividade, activityForm);
     } else {
       resetForm();
     }
@@ -98,42 +155,14 @@ export default function ListaAtividades() {
 
     if (!saved) return;
 
+    const rankingSalvoComSucesso = await salvarRanking(
+      saved.id,
+      payload.tipo === "fixa",
+    );
+    if (!rankingSalvoComSucesso) return;
+
     setIsModalOpen(false);
     resetForm();
-  };
-
-  const abrirRanking = (atividade) => {
-    const elegiveis = funcionariosList
-      .filter(
-        (funcionario) =>
-          atividade.todos_setores ||
-          String(funcionario.setor_id) === String(atividade.setor_id),
-      )
-      .sort((a, b) => a.nome.localeCompare(b.nome));
-    const registros = rankingSalvo
-      .filter(
-        (registro) => String(registro.atividade_id) === String(atividade.id),
-      )
-      .sort((a, b) => a.posicao - b.posicao);
-    const elegiveisIds = new Set(elegiveis.map((item) => String(item.id)));
-    const ranqueados = registros
-      .filter((registro) => !registro.desconsiderado)
-      .map((registro) => String(registro.funcionario_id))
-      .filter((id) => elegiveisIds.has(id));
-    const excluidos = registros
-      .filter((registro) => registro.desconsiderado)
-      .map((registro) => String(registro.funcionario_id))
-      .filter((id) => elegiveisIds.has(id));
-    const conhecidos = new Set([...ranqueados, ...excluidos]);
-
-    setRankingAtividade(atividade);
-    setRankingIds([
-      ...ranqueados,
-      ...elegiveis
-        .map((item) => String(item.id))
-        .filter((id) => !conhecidos.has(id)),
-    ]);
-    setDesconsideradosIds(excluidos);
   };
 
   const moverFuncionario = (destino, sobreId = null) => {
@@ -178,33 +207,35 @@ export default function ListaAtividades() {
     setDraggedFuncionarioId(null);
   };
 
-  const salvarRanking = async () => {
+  const salvarRanking = async (atividadeId, isFixa) => {
     setSalvandoRanking(true);
     const { error: deleteError } = await supabase
       .from("atividade_fixa_ranking")
       .delete()
-      .eq("atividade_id", rankingAtividade.id);
+      .eq("atividade_id", atividadeId);
 
     if (deleteError) {
       alert(`Erro ao salvar ranking.\n\n${deleteError.message}`);
       setSalvandoRanking(false);
-      return;
+      return false;
     }
 
-    const payload = [
-      ...rankingIds.map((funcionarioId, index) => ({
-        atividade_id: rankingAtividade.id,
-        funcionario_id: funcionarioId,
-        posicao: index + 1,
-        desconsiderado: false,
-      })),
-      ...desconsideradosIds.map((funcionarioId, index) => ({
-        atividade_id: rankingAtividade.id,
-        funcionario_id: funcionarioId,
-        posicao: rankingIds.length + index + 1,
-        desconsiderado: true,
-      })),
-    ];
+    const payload = isFixa
+      ? [
+          ...rankingIds.map((funcionarioId, index) => ({
+            atividade_id: atividadeId,
+            funcionario_id: funcionarioId,
+            posicao: index + 1,
+            desconsiderado: false,
+          })),
+          ...desconsideradosIds.map((funcionarioId, index) => ({
+            atividade_id: atividadeId,
+            funcionario_id: funcionarioId,
+            posicao: rankingIds.length + index + 1,
+            desconsiderado: true,
+          })),
+        ]
+      : [];
 
     if (payload.length > 0) {
       const { error } = await supabase
@@ -213,13 +244,13 @@ export default function ListaAtividades() {
       if (error) {
         alert(`Erro ao salvar ranking.\n\n${error.message}`);
         setSalvandoRanking(false);
-        return;
+        return false;
       }
     }
 
     await refetchRanking();
-    setRankingAtividade(null);
     setSalvandoRanking(false);
+    return true;
   };
 
   const handleDelete = async (atividade) => {
@@ -246,7 +277,8 @@ export default function ListaAtividades() {
             className="add-button"
             onClick={() => openModal()}
           >
-            + Nova atividade
+            <Plus size={16} aria-hidden="true" />
+            Nova atividade
           </button>
         </div>
 
@@ -282,15 +314,6 @@ export default function ListaAtividades() {
                   </td>
                   <td>{atividade.descricao || "—"}</td>
                   <td className="actions">
-                    {atividade.tipo === "fixa" && (
-                      <button
-                        type="button"
-                        className="secondary-button activity-ranking-button"
-                        onClick={() => abrirRanking(atividade)}
-                      >
-                        Configurar ranking
-                      </button>
-                    )}
                     <button
                       className="btn edit"
                       aria-label={`Editar ${atividade.nome}`}
@@ -322,7 +345,7 @@ export default function ListaAtividades() {
         onClick={() => setIsModalOpen(false)}
       >
         <div
-          className="modal-card"
+          className="modal-card activity-form-modal"
           role="dialog"
           aria-modal="true"
           aria-labelledby="atividade-modal-title"
@@ -350,11 +373,13 @@ export default function ListaAtividades() {
                   value={form.todos_setores ? "__todos__" : form.setor_id}
                   onChange={(e) => {
                     const isTodosSetores = e.target.value === "__todos__";
-                    setForm((prev) => ({
-                      ...prev,
-                      setor_id: isTodosSetores ? prev.setor_id : e.target.value,
+                    const nextForm = {
+                      ...form,
+                      setor_id: isTodosSetores ? form.setor_id : e.target.value,
                       todos_setores: isTodosSetores,
-                    }));
+                    };
+                    setForm(nextForm);
+                    updateRankingCandidates(nextForm);
                   }}
                 >
                   <option value="__todos__">Todos os setores</option>
@@ -393,6 +418,87 @@ export default function ListaAtividades() {
                 </select>
               </label>
 
+              {form.tipo === "fixa" && (
+                <section className="activity-ranking-inline">
+                  <div className="activity-ranking-intro">
+                    <h4>Funcionários disponíveis para esta atividade</h4>
+                    <p>
+                      Arraste para ordenar a preferência ou mover para a lista
+                      de desconsiderados.
+                    </p>
+                  </div>
+                  <div className="activity-ranking-columns">
+                    {[
+                      {
+                        id: "ranking",
+                        title: "Ranking",
+                        ids: rankingIds,
+                      },
+                      {
+                        id: "desconsiderados",
+                        title: "Desconsiderar",
+                        ids: desconsideradosIds,
+                      },
+                    ].map((lista) => (
+                      <section
+                        className="activity-ranking-list"
+                        key={lista.id}
+                        onDragOver={(event) => event.preventDefault()}
+                        onDrop={(event) => {
+                          event.preventDefault();
+                          moverFuncionario(lista.id);
+                        }}
+                      >
+                        <h4>{lista.title}</h4>
+                        <div className="activity-ranking-items">
+                          {lista.ids.map((funcionarioId, index) => {
+                            const funcionario = funcionariosList.find(
+                              (item) => String(item.id) === funcionarioId,
+                            );
+                            if (!funcionario) return null;
+                            return (
+                              <div
+                                className="activity-ranking-item"
+                                key={funcionarioId}
+                                draggable
+                                onDragStart={(event) => {
+                                  setDraggedFuncionarioId(funcionarioId);
+                                  event.dataTransfer.effectAllowed = "move";
+                                }}
+                                onDragOver={(event) => event.preventDefault()}
+                                onDrop={(event) => {
+                                  event.preventDefault();
+                                  event.stopPropagation();
+                                  moverFuncionario(lista.id, funcionarioId);
+                                }}
+                              >
+                                <span
+                                  className="activity-ranking-grip"
+                                  aria-hidden="true"
+                                >
+                                  ⋮⋮
+                                </span>
+                                {lista.id === "ranking" && (
+                                  <strong>{index + 1}</strong>
+                                )}
+                                <span>{funcionario.nome}</span>
+                              </div>
+                            );
+                          })}
+                          {lista.ids.length === 0 && (
+                            <p className="activity-ranking-empty">
+                              {form.setor_id || form.todos_setores
+                                ? "Arraste funcionários para esta lista."
+                                : "Selecione um setor para carregar os funcionários."}
+                            </p>
+                          )}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                </section>
+              )}
+
               <label style={{ gridColumn: "1 / -1" }}>
                 Descrição
                 <textarea
@@ -417,126 +523,15 @@ export default function ListaAtividades() {
               >
                 Cancelar
               </button>
-              <button type="submit" className="primary-button">
-                Salvar
+              <button
+                type="submit"
+                className="primary-button"
+                disabled={salvandoRanking}
+              >
+                {salvandoRanking ? "Salvando..." : "Salvar"}
               </button>
             </div>
           </form>
-        </div>
-      </div>
-
-      <div
-        className={`modal-overlay ${rankingAtividade ? "open" : ""}`}
-        style={{ zIndex: 60 }}
-        onClick={() => setRankingAtividade(null)}
-      >
-        <div
-          className="modal-card activity-ranking-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="activity-ranking-title"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="modal-header">
-            <div>
-              <h3 id="activity-ranking-title">
-                Ranking: {rankingAtividade?.nome}
-              </h3>
-              <p>Arraste os funcionários para ordenar ou desconsiderar.</p>
-            </div>
-            <button
-              type="button"
-              className="close-button"
-              onClick={() => setRankingAtividade(null)}
-              aria-label="Fechar ranking"
-            >
-              ×
-            </button>
-          </div>
-
-          <div className="activity-ranking-columns">
-            {[
-              {
-                id: "ranking",
-                title: "Ranking de preferência",
-                ids: rankingIds,
-              },
-              {
-                id: "desconsiderados",
-                title: "Desconsiderar",
-                ids: desconsideradosIds,
-              },
-            ].map((lista) => (
-              <section
-                className="activity-ranking-list"
-                key={lista.id}
-                onDragOver={(event) => event.preventDefault()}
-                onDrop={(event) => {
-                  event.preventDefault();
-                  moverFuncionario(lista.id);
-                }}
-              >
-                <h4>{lista.title}</h4>
-                <div className="activity-ranking-items">
-                  {lista.ids.map((funcionarioId, index) => {
-                    const funcionario = funcionariosList.find(
-                      (item) => String(item.id) === funcionarioId,
-                    );
-                    if (!funcionario) return null;
-                    return (
-                      <div
-                        className="activity-ranking-item"
-                        key={funcionarioId}
-                        draggable
-                        onDragStart={(event) => {
-                          setDraggedFuncionarioId(funcionarioId);
-                          event.dataTransfer.effectAllowed = "move";
-                        }}
-                        onDragOver={(event) => event.preventDefault()}
-                        onDrop={(event) => {
-                          event.preventDefault();
-                          event.stopPropagation();
-                          moverFuncionario(lista.id, funcionarioId);
-                        }}
-                      >
-                        <span
-                          className="activity-ranking-grip"
-                          aria-hidden="true"
-                        >
-                          ⋮⋮
-                        </span>
-                        {lista.id === "ranking" && <strong>{index + 1}</strong>}
-                        <span>{funcionario.nome}</span>
-                      </div>
-                    );
-                  })}
-                  {lista.ids.length === 0 && (
-                    <p className="activity-ranking-empty">
-                      Arraste funcionários para esta lista.
-                    </p>
-                  )}
-                </div>
-              </section>
-            ))}
-          </div>
-
-          <div className="modal-actions">
-            <button
-              type="button"
-              className="secondary-button"
-              onClick={() => setRankingAtividade(null)}
-            >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              className="primary-button"
-              onClick={salvarRanking}
-              disabled={salvandoRanking}
-            >
-              {salvandoRanking ? "Salvando..." : "Salvar ranking"}
-            </button>
-          </div>
         </div>
       </div>
     </>
