@@ -1,5 +1,5 @@
 import { useState } from "react";
-import ListaAtividades from "../configuracoes/ListaAtividades";
+import ListaAtividades from "./ListaAtividades";
 import ReportModalActions from "../../components/ReportModalActions";
 
 const SUB_TABS = [{ key: "atividades", label: "Atividades" }];
