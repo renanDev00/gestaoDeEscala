@@ -36,7 +36,9 @@ function RelatoriosIndex() {
         ))}
       </nav>
 
-      <main className="content">
+      <main
+        className={`content ${subPage === "campanha-ftw" ? "content--campaign" : ""}`}
+      >
         {subPage === "resumo" && <ListaRelatorios />}
         {subPage === "campanha-ftw" && <CampanhaFtwRelatorio />}
       </main>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { CalendarDays, CalendarRange, X } from "lucide-react";
 import ZoneRelatorio from "../pages/relatorios/ZoneRelatorio";
@@ -12,6 +12,11 @@ const REPORTS = {
 export default function ReportModalActions() {
   const [reportOpen, setReportOpen] = useState(null);
   const ReportComponent = reportOpen ? REPORTS[reportOpen].component : null;
+
+  useEffect(() => {
+    document.body.classList.toggle("report-print-mode", Boolean(reportOpen));
+    return () => document.body.classList.remove("report-print-mode");
+  }, [reportOpen]);
 
   return (
     <>

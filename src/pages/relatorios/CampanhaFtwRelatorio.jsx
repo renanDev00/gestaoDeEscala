@@ -1,5 +1,13 @@
 import { useMemo, useState } from "react";
-import { Pencil, Plus, Save, X } from "lucide-react";
+import {
+  BadgePercent,
+  Pencil,
+  Plus,
+  Printer,
+  Save,
+  Trash2,
+  X,
+} from "lucide-react";
 import { useSupabase } from "../../hooks/useSupabase";
 import { supabase } from "../../lib/supabase";
 import { resolverDia } from "../../utils/domingoUtils";
@@ -42,6 +50,49 @@ function classePercentual(valor) {
   return "campaign-percent campaign-percent--low";
 }
 
+function encontrarFaixa(faixas, valorPercentual) {
+  return (
+    faixas.find((faixa) => {
+      const minimo = Number(faixa.percentual_min);
+      const maximo =
+        faixa.percentual_max === null ? null : Number(faixa.percentual_max);
+      return (
+        valorPercentual >= minimo &&
+        (maximo === null || valorPercentual < maximo)
+      );
+    }) || null
+  );
+}
+
+function formatoPercentual(valor) {
+  return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 2 }).format(
+    Number(valor),
+  );
+}
+
+function rotuloFaixa(faixa) {
+  if (!faixa) return "";
+  return faixa.percentual_max === null
+    ? `${formatoPercentual(faixa.percentual_min)}% ou mais`
+    : `${formatoPercentual(faixa.percentual_min)}%–${formatoPercentual(faixa.percentual_max)}%`;
+}
+
+function proximaCompetencia(mes) {
+  const [ano, numeroMes] = mes.split("-").map(Number);
+  const data = new Date(ano, numeroMes - 2, 1, 12);
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`;
+}
+
+function faixaSobrepoe(a, b) {
+  const limiteA =
+    a.percentual_max === null ? Infinity : Number(a.percentual_max);
+  const limiteB =
+    b.percentual_max === null ? Infinity : Number(b.percentual_max);
+  return (
+    Number(a.percentual_min) < limiteB && Number(b.percentual_min) < limiteA
+  );
+}
+
 export default function CampanhaFtwRelatorio() {
   const mesAtual = mesAtualLocal();
   const [mesSelecionado, setMesSelecionado] = useState(mesAtual);
@@ -55,6 +106,15 @@ export default function CampanhaFtwRelatorio() {
   const [modoEdicao, setModoEdicao] = useState(false);
   const [rascunhos, setRascunhos] = useState({});
   const [salvando, setSalvando] = useState(false);
+  const [bonificacaoAberta, setBonificacaoAberta] = useState(false);
+  const [salvandoFaixa, setSalvandoFaixa] = useState(false);
+  const [editandoFaixaId, setEditandoFaixaId] = useState(null);
+  const [faixaForm, setFaixaForm] = useState({
+    tipo: "pares",
+    percentual_min: "",
+    percentual_max: "",
+    valor_bonificacao: "",
+  });
 
   const { data: funcionarios, loading: carregandoFuncionarios } =
     useSupabase("funcionarios");
@@ -71,6 +131,11 @@ export default function CampanhaFtwRelatorio() {
     loading: carregandoResultados,
     refetch: recarregarResultados,
   } = useSupabase("campanhas_ftw_resultados");
+  const {
+    data: bonificacoes,
+    loading: carregandoBonificacoes,
+    refetch: recarregarBonificacoes,
+  } = useSupabase("campanhas_ftw_bonificacoes");
   const { data: ausencias, loading: carregandoAusencias } =
     useSupabase("ausencias");
   const { data: mudancas, loading: carregandoMudancas } = useSupabase(
@@ -101,6 +166,24 @@ export default function CampanhaFtwRelatorio() {
         (item) => campanha && String(item.campanha_id) === String(campanha.id),
       ),
     [campanha, resultados],
+  );
+  const bonificacoesDaCampanha = useMemo(
+    () =>
+      bonificacoes
+        .filter(
+          (faixa) =>
+            campanha && String(faixa.campanha_id) === String(campanha.id),
+        )
+        .sort((a, b) => Number(a.percentual_min) - Number(b.percentual_min)),
+    [bonificacoes, campanha],
+  );
+  const faixasPares = useMemo(
+    () => bonificacoesDaCampanha.filter((faixa) => faixa.tipo === "pares"),
+    [bonificacoesDaCampanha],
+  );
+  const faixasValor = useMemo(
+    () => bonificacoesDaCampanha.filter((faixa) => faixa.tipo === "valor"),
+    [bonificacoesDaCampanha],
   );
   const dirty = useMemo(() => {
     if (!modoEdicao || !campanha) return false;
@@ -160,6 +243,31 @@ export default function CampanhaFtwRelatorio() {
         Number(campanha.meta_pares) - totalPares,
         0,
       );
+      const faixaPares = encontrarFaixa(
+        faixasPares,
+        (totalPares / Number(campanha.meta_pares)) * 100,
+      );
+      const bateuMetaPares = totalPares >= Number(campanha.meta_pares);
+      const faixaValorEncontrada = encontrarFaixa(
+        faixasValor,
+        (totalValor / Number(campanha.meta_valor)) * 100,
+      );
+      const faixaValorBloqueada = !bateuMetaPares ? faixaValorEncontrada : null;
+      const faixaValor = bateuMetaPares ? faixaValorEncontrada : null;
+      const bonusPares = Number(faixaPares?.valor_bonificacao || 0);
+      const bonusValor = Number(faixaValor?.valor_bonificacao || 0);
+      const proximaFaixaPares =
+        faixasPares.find(
+          (faixa) =>
+            Number(faixa.percentual_min) >
+            (totalPares / Number(campanha.meta_pares)) * 100,
+        ) || null;
+      const proximaFaixaValor =
+        faixasValor.find(
+          (faixa) =>
+            Number(faixa.percentual_min) >
+            (totalValor / Number(campanha.meta_valor)) * 100,
+        ) || null;
       return {
         funcionario,
         totalPares,
@@ -169,11 +277,41 @@ export default function CampanhaFtwRelatorio() {
         paresRestantes,
         diasRestantes,
         mediaDiaria: diasRestantes ? paresRestantes / diasRestantes : null,
+        faixaPares,
+        faixaValor,
+        faixaValorBloqueada,
+        bateuMetaPares,
+        bonusPares,
+        bonusValor,
+        ganhoAtual: bonusPares + bonusValor,
+        proximaFaixaPares,
+        paresFaltando: proximaFaixaPares
+          ? Math.max(
+              Math.ceil(
+                (Number(campanha.meta_pares) *
+                  Number(proximaFaixaPares.percentual_min)) /
+                  100,
+              ) - totalPares,
+              0,
+            )
+          : null,
+        proximaFaixaValor,
+        valorFaltando: proximaFaixaValor
+          ? Math.max(
+              (Number(campanha.meta_valor) *
+                Number(proximaFaixaValor.percentual_min)) /
+                100 -
+                totalValor,
+              0,
+            )
+          : null,
       };
     });
   }, [
     ausencias,
     campanha,
+    faixasPares,
+    faixasValor,
     funcionariosFtw,
     gruposDomingo,
     mesSelecionado,
@@ -183,11 +321,17 @@ export default function CampanhaFtwRelatorio() {
     trocas,
   ]);
 
+  const totalGanhoAtual = useMemo(
+    () => linhas.reduce((total, linha) => total + linha.ganhoAtual, 0),
+    [linhas],
+  );
+
   const carregando =
     carregandoFuncionarios ||
     carregandoSetores ||
     carregandoCampanhas ||
     carregandoResultados ||
+    carregandoBonificacoes ||
     carregandoAusencias ||
     carregandoMudancas ||
     carregandoTrocas ||
@@ -249,6 +393,15 @@ export default function CampanhaFtwRelatorio() {
     setFormularioAberto(false);
   };
 
+  const imprimirRelatorio = () => {
+    const limparModoImpressao = () => {
+      document.body.classList.remove("campaign-print-mode");
+    };
+    document.body.classList.add("campaign-print-mode");
+    window.addEventListener("afterprint", limparModoImpressao, { once: true });
+    window.print();
+  };
+
   const iniciarEdicao = () => {
     setRascunhos(
       Object.fromEntries(
@@ -278,7 +431,181 @@ export default function CampanhaFtwRelatorio() {
     )
       return;
     setMesSelecionado(novoMes);
+    setBonificacaoAberta(false);
+    setEditandoFaixaId(null);
+    setFaixaForm({
+      tipo: "pares",
+      percentual_min: "",
+      percentual_max: "",
+      valor_bonificacao: "",
+    });
     if (modoEdicao) cancelarEdicao();
+  };
+
+  const iniciarEdicaoFaixa = (faixa) => {
+    setEditandoFaixaId(faixa.id);
+    setFaixaForm({
+      tipo: faixa.tipo,
+      percentual_min: String(faixa.percentual_min),
+      percentual_max:
+        faixa.percentual_max === null ? "" : String(faixa.percentual_max),
+      valor_bonificacao: String(faixa.valor_bonificacao),
+    });
+    setBonificacaoAberta(true);
+  };
+
+  const salvarFaixa = async (event, tipo = faixaForm.tipo) => {
+    event.preventDefault();
+    if (!campanha || salvandoFaixa) return;
+    const minimo = Number(faixaForm.percentual_min);
+    const maximo =
+      faixaForm.percentual_max.trim() === ""
+        ? null
+        : Number(faixaForm.percentual_max);
+    const valor = Number(faixaForm.valor_bonificacao);
+    if (
+      !Number.isFinite(minimo) ||
+      minimo < 0 ||
+      (maximo !== null && (!Number.isFinite(maximo) || maximo <= minimo)) ||
+      !Number.isFinite(valor) ||
+      valor <= 0
+    ) {
+      window.alert(
+        "Informe um mínimo maior ou igual a zero, um máximo maior que o mínimo e uma bonificação maior que zero.",
+      );
+      return;
+    }
+    const demaisFaixas = bonificacoesDaCampanha.filter(
+      (faixa) =>
+        faixa.tipo === tipo && String(faixa.id) !== String(editandoFaixaId),
+    );
+    const candidata = { percentual_min: minimo, percentual_max: maximo };
+    const conflito = demaisFaixas.find((faixa) =>
+      faixaSobrepoe(candidata, faixa),
+    );
+    if (conflito) {
+      window.alert(`Esta faixa se sobrepõe à faixa ${rotuloFaixa(conflito)}.`);
+      return;
+    }
+    if (
+      maximo === null &&
+      demaisFaixas.some((faixa) => Number(faixa.percentual_min) > minimo)
+    ) {
+      const posterior = demaisFaixas.find(
+        (faixa) => Number(faixa.percentual_min) > minimo,
+      );
+      window.alert(
+        `A faixa aberta precisa ser a última. Existe uma faixa posterior iniciando em ${formatoPercentual(posterior.percentual_min)}%.`,
+      );
+      return;
+    }
+    const payload = {
+      campanha_id: campanha.id,
+      tipo,
+      percentual_min: minimo,
+      percentual_max: maximo,
+      valor_bonificacao: Number(valor.toFixed(2)),
+    };
+    setSalvandoFaixa(true);
+    const resposta = editandoFaixaId
+      ? await supabase
+          .from("campanhas_ftw_bonificacoes")
+          .update(payload)
+          .eq("id", editandoFaixaId)
+      : await supabase.from("campanhas_ftw_bonificacoes").insert(payload);
+    if (resposta.error) {
+      window.alert(`Erro ao salvar a faixa.\n\n${resposta.error.message}`);
+      setSalvandoFaixa(false);
+      return;
+    }
+    await recarregarBonificacoes();
+    setEditandoFaixaId(null);
+    setFaixaForm({
+      tipo,
+      percentual_min: "",
+      percentual_max: "",
+      valor_bonificacao: "",
+    });
+    setSalvandoFaixa(false);
+  };
+
+  const excluirFaixa = async (faixa) => {
+    if (!window.confirm(`Excluir a faixa ${rotuloFaixa(faixa)}?`)) return;
+    const { error } = await supabase
+      .from("campanhas_ftw_bonificacoes")
+      .delete()
+      .eq("id", faixa.id);
+    if (error) {
+      window.alert(`Erro ao excluir a faixa.\n\n${error.message}`);
+      return;
+    }
+    await recarregarBonificacoes();
+    if (String(editandoFaixaId) === String(faixa.id)) {
+      setEditandoFaixaId(null);
+      setFaixaForm({
+        tipo: faixa.tipo,
+        percentual_min: "",
+        percentual_max: "",
+        valor_bonificacao: "",
+      });
+    }
+  };
+
+  const copiarFaixasMesAnterior = async () => {
+    if (!campanha) return;
+    const mesAnterior = proximaCompetencia(campanha.mes);
+    const campanhaAnterior = campanhas.find((item) => item.mes === mesAnterior);
+    const origem = bonificacoes.filter(
+      (faixa) =>
+        campanhaAnterior &&
+        String(faixa.campanha_id) === String(campanhaAnterior.id),
+    );
+    if (!origem.length) {
+      window.alert(
+        "O mês anterior não possui faixas de bonificação cadastradas.",
+      );
+      return;
+    }
+    if (
+      bonificacoesDaCampanha.length > 0 &&
+      !window.confirm(
+        "Já existem faixas nesta campanha. Deseja substituir todas pelas faixas do mês anterior?",
+      )
+    )
+      return;
+    if (bonificacoesDaCampanha.length > 0) {
+      const { error } = await supabase
+        .from("campanhas_ftw_bonificacoes")
+        .delete()
+        .eq("campanha_id", campanha.id);
+      if (error) {
+        window.alert(`Erro ao substituir as faixas.\n\n${error.message}`);
+        return;
+      }
+    }
+    const { error } = await supabase.from("campanhas_ftw_bonificacoes").insert(
+      origem.map(
+        ({ tipo, percentual_min, percentual_max, valor_bonificacao }) => ({
+          campanha_id: campanha.id,
+          tipo,
+          percentual_min,
+          percentual_max,
+          valor_bonificacao,
+        }),
+      ),
+    );
+    if (error) {
+      window.alert(`Erro ao copiar as faixas.\n\n${error.message}`);
+      return;
+    }
+    await recarregarBonificacoes();
+    setEditandoFaixaId(null);
+    setFaixaForm({
+      tipo: "pares",
+      percentual_min: "",
+      percentual_max: "",
+      valor_bonificacao: "",
+    });
   };
 
   const salvarResultados = async () => {
@@ -353,6 +680,141 @@ export default function CampanhaFtwRelatorio() {
   const campanhaDoFormulario = campanhas.find(
     (item) => item.mes === formulario.mes,
   );
+  const possuiFaixas = bonificacoesDaCampanha.length > 0;
+
+  const renderEditorFaixas = (tipo, titulo, faixas) => (
+    <section className="campaign-tier-editor" key={tipo}>
+      <h3>{titulo}</h3>
+      {tipo === "valor" && (
+        <p className="campaign-tier-notice">
+          A bonificação de valor só é liberada depois que o funcionário bate
+          100% da meta de pares.
+        </p>
+      )}
+      {faixas.length ? (
+        <ul className="campaign-tier-list">
+          {faixas.map((faixa) => (
+            <li key={faixa.id}>
+              <span>
+                {rotuloFaixa(faixa)} →{" "}
+                {moeda.format(Number(faixa.valor_bonificacao))}
+              </span>
+              <span className="campaign-tier-actions">
+                <button
+                  type="button"
+                  className="campaign-icon-button"
+                  aria-label={`Editar faixa ${rotuloFaixa(faixa)}`}
+                  onClick={() => iniciarEdicaoFaixa(faixa)}
+                >
+                  <Pencil size={15} aria-hidden="true" />
+                </button>
+                <button
+                  type="button"
+                  className="campaign-icon-button campaign-icon-button--danger"
+                  aria-label={`Excluir faixa ${rotuloFaixa(faixa)}`}
+                  onClick={() => excluirFaixa(faixa)}
+                >
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
+              </span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="campaign-tier-empty">Nenhuma faixa cadastrada</p>
+      )}
+      <form
+        className="campaign-tier-form"
+        onSubmit={(event) => salvarFaixa(event, tipo)}
+      >
+        <label className="campaign-field">
+          De (%)
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            required
+            value={faixaForm.tipo === tipo ? faixaForm.percentual_min : ""}
+            onChange={(event) =>
+              setFaixaForm({
+                ...faixaForm,
+                tipo,
+                percentual_min: event.target.value,
+              })
+            }
+          />
+        </label>
+        <label className="campaign-field">
+          Até (%)
+          <input
+            type="number"
+            min="0"
+            step="0.01"
+            value={faixaForm.tipo === tipo ? faixaForm.percentual_max : ""}
+            onChange={(event) =>
+              setFaixaForm({
+                ...faixaForm,
+                tipo,
+                percentual_max: event.target.value,
+              })
+            }
+          />
+        </label>
+        <label className="campaign-field">
+          Bonificação (R$)
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            required
+            value={faixaForm.tipo === tipo ? faixaForm.valor_bonificacao : ""}
+            onChange={(event) =>
+              setFaixaForm({
+                ...faixaForm,
+                tipo,
+                valor_bonificacao: event.target.value,
+              })
+            }
+          />
+        </label>
+        <div className="campaign-tier-form-actions">
+          <button
+            type="submit"
+            className="campaign-button campaign-button--primary"
+            disabled={salvandoFaixa}
+          >
+            {editandoFaixaId && faixaForm.tipo === tipo ? (
+              <Save size={16} aria-hidden="true" />
+            ) : (
+              <Plus size={16} aria-hidden="true" />
+            )}
+            {salvandoFaixa
+              ? "Salvando..."
+              : editandoFaixaId && faixaForm.tipo === tipo
+                ? "Salvar faixa"
+                : "Adicionar faixa"}
+          </button>
+          {editandoFaixaId && faixaForm.tipo === tipo && (
+            <button
+              type="button"
+              className="campaign-button"
+              onClick={() => {
+                setEditandoFaixaId(null);
+                setFaixaForm({
+                  tipo,
+                  percentual_min: "",
+                  percentual_max: "",
+                  valor_bonificacao: "",
+                });
+              }}
+            >
+              Cancelar edição
+            </button>
+          )}
+        </div>
+      </form>
+    </section>
+  );
 
   return (
     <div className="campaign-report">
@@ -384,10 +846,36 @@ export default function CampanhaFtwRelatorio() {
           <Plus size={16} aria-hidden="true" />
           Cadastrar campanha
         </button>
+        <button
+          type="button"
+          className="campaign-button"
+          onClick={() => setBonificacaoAberta((aberta) => !aberta)}
+          disabled={!campanha}
+          title={
+            !campanha
+              ? "Cadastre a campanha do mês primeiro"
+              : "Cadastrar bonificação"
+          }
+        >
+          <BadgePercent size={16} aria-hidden="true" />
+          Cadastrar bonificação
+        </button>
+        <button
+          type="button"
+          className="campaign-button campaign-button--primary"
+          onClick={imprimirRelatorio}
+          aria-label="Imprimir relatório da Campanha FTW"
+        >
+          <Printer size={16} aria-hidden="true" />
+          Imprimir
+        </button>
       </div>
 
       {formularioAberto && (
-        <form className="table-panel campaign-form" onSubmit={salvarCampanha}>
+        <form
+          className="table-panel campaign-form no-print"
+          onSubmit={salvarCampanha}
+        >
           <div className="panel-header">
             <h2>
               {campanhaEmEdicao ? "Editar campanha" : "Cadastrar campanha"}
@@ -468,6 +956,51 @@ export default function CampanhaFtwRelatorio() {
         </form>
       )}
 
+      {bonificacaoAberta && campanha && (
+        <section className="table-panel campaign-form no-print">
+          <div className="panel-header">
+            <div>
+              <h2>Bonificações de {formatarMes(campanha.mes)}</h2>
+              <span className="campaign-subtitle">
+                Faixas com limite mínimo inclusivo e máximo exclusivo
+              </span>
+            </div>
+            <div className="campaign-actions">
+              <button
+                type="button"
+                className="campaign-button"
+                onClick={copiarFaixasMesAnterior}
+              >
+                Copiar faixas do mês anterior
+              </button>
+              <button
+                type="button"
+                className="campaign-icon-button"
+                aria-label="Fechar bonificações"
+                onClick={() => {
+                  setBonificacaoAberta(false);
+                  setEditandoFaixaId(null);
+                }}
+              >
+                <X size={18} aria-hidden="true" />
+              </button>
+            </div>
+          </div>
+          <div className="campaign-tier-editors">
+            {renderEditorFaixas(
+              "pares",
+              "Faixas de pares (% da meta de pares)",
+              faixasPares,
+            )}
+            {renderEditorFaixas(
+              "valor",
+              "Faixas de valor de venda (% da meta de valor)",
+              faixasValor,
+            )}
+          </div>
+        </section>
+      )}
+
       {!campanha ? (
         <div className="table-panel campaign-empty">
           <h2>Nenhuma campanha cadastrada para este mês</h2>
@@ -481,150 +1014,382 @@ export default function CampanhaFtwRelatorio() {
           </button>
         </div>
       ) : (
-        <section className="table-panel">
-          <header className="panel-header campaign-table-header">
-            <div>
-              <h2>Campanha FTW</h2>
-              <span className="campaign-subtitle">
-                {formatarMes(campanha.mes)}
-              </span>
-            </div>
-            <div className="campaign-actions no-print">
-              {modoEdicao ? (
-                <>
-                  <button
-                    type="button"
-                    className="campaign-button campaign-button--primary"
-                    onClick={salvarResultados}
-                    disabled={salvando}
-                  >
-                    <Save size={16} aria-hidden="true" />
-                    {salvando ? "Salvando..." : "Salvar"}
-                  </button>
+        <>
+          <section className="table-panel">
+            <header className="panel-header campaign-table-header">
+              <div>
+                <h2>Campanha FTW</h2>
+                <span className="campaign-subtitle">
+                  {formatarMes(campanha.mes)}
+                </span>
+              </div>
+              <div className="campaign-actions no-print">
+                {modoEdicao ? (
+                  <>
+                    <button
+                      type="button"
+                      className="campaign-button campaign-button--primary"
+                      onClick={salvarResultados}
+                      disabled={salvando}
+                    >
+                      <Save size={16} aria-hidden="true" />
+                      {salvando ? "Salvando..." : "Salvar"}
+                    </button>
+                    <button
+                      type="button"
+                      className="campaign-button"
+                      onClick={cancelarEdicao}
+                      disabled={salvando}
+                    >
+                      Cancelar
+                    </button>
+                  </>
+                ) : (
                   <button
                     type="button"
                     className="campaign-button"
-                    onClick={cancelarEdicao}
-                    disabled={salvando}
+                    onClick={iniciarEdicao}
                   >
-                    Cancelar
+                    <Pencil size={16} aria-hidden="true" />
+                    Editar
                   </button>
-                </>
-              ) : (
-                <button
-                  type="button"
-                  className="campaign-button"
-                  onClick={iniciarEdicao}
-                >
-                  <Pencil size={16} aria-hidden="true" />
-                  Editar
-                </button>
-              )}
-            </div>
-          </header>
-          <div className="table-wrapper campaign-table-wrapper">
-            <table className="campaign-table">
-              <thead>
-                <tr>
-                  <th>Nome</th>
-                  <th>Meta de pares</th>
-                  <th>Pares vendidos</th>
-                  <th>% de pares</th>
-                  <th>Média diária necessária</th>
-                  <th>Meta de valor</th>
-                  <th>Total vendido</th>
-                  <th>% de valor</th>
-                </tr>
-              </thead>
-              <tbody>
-                {linhas.map((linha) => (
-                  <tr key={linha.funcionario.id}>
-                    <td className="campaign-name">{linha.funcionario.nome}</td>
-                    <td>{campanha.meta_pares}</td>
-                    <td>
-                      {modoEdicao ? (
-                        <input
-                          className="campaign-number-input"
-                          aria-label={`Total de pares de ${linha.funcionario.nome}`}
-                          type="number"
-                          min="0"
-                          step="1"
-                          value={
-                            rascunhos[String(linha.funcionario.id)]
-                              ?.total_pares ?? "0"
-                          }
-                          onChange={(event) =>
-                            setRascunhos((atual) => ({
-                              ...atual,
-                              [String(linha.funcionario.id)]: {
-                                ...atual[String(linha.funcionario.id)],
-                                total_pares: event.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      ) : (
-                        linha.totalPares
-                      )}
-                    </td>
-                    <td>
-                      <span className={classePercentual(linha.percentualPares)}>
-                        {percentual.format(linha.percentualPares)}%
-                      </span>
-                    </td>
-                    <td>
-                      {linha.paresRestantes === 0 ? (
-                        <span className="campaign-target-hit">Meta batida</span>
-                      ) : linha.diasRestantes === 0 ? (
-                        <span title="Sem dias restantes">—</span>
-                      ) : (
-                        decimal.format(linha.mediaDiaria)
-                      )}
-                      <small className="campaign-days-left">
-                        {linha.diasRestantes}{" "}
-                        {linha.diasRestantes === 1
-                          ? "dia restante"
-                          : "dias restantes"}
-                      </small>
-                    </td>
-                    <td>{moeda.format(Number(campanha.meta_valor))}</td>
-                    <td>
-                      {modoEdicao ? (
-                        <input
-                          className="campaign-number-input"
-                          aria-label={`Total vendido de ${linha.funcionario.nome}`}
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          value={
-                            rascunhos[String(linha.funcionario.id)]
-                              ?.total_valor ?? "0"
-                          }
-                          onChange={(event) =>
-                            setRascunhos((atual) => ({
-                              ...atual,
-                              [String(linha.funcionario.id)]: {
-                                ...atual[String(linha.funcionario.id)],
-                                total_valor: event.target.value,
-                              },
-                            }))
-                          }
-                        />
-                      ) : (
-                        moeda.format(linha.totalValor)
-                      )}
-                    </td>
-                    <td>
-                      <span className={classePercentual(linha.percentualValor)}>
-                        {percentual.format(linha.percentualValor)}%
-                      </span>
-                    </td>
+                )}
+              </div>
+            </header>
+            {!possuiFaixas && (
+              <p className="campaign-bonus-empty-note">
+                Nenhuma bonificação cadastrada para esta campanha.
+              </p>
+            )}
+            <div className="table-wrapper campaign-table-wrapper">
+              <table
+                className={`campaign-table ${possuiFaixas ? "campaign-table--bonuses" : "campaign-table--without-bonuses"}`}
+              >
+                <thead>
+                  <tr>
+                    <th>Nome</th>
+                    <th title="Meta individual de pares">Meta pares</th>
+                    <th title="Total de pares vendidos">Pares vendidos</th>
+                    <th title="Percentual de atingimento da meta de pares">
+                      % pares
+                    </th>
+                    <th title="Média diária de pares necessária">Pares/dia</th>
+                    <th title="Meta individual de valor">Meta R$</th>
+                    <th title="Total vendido em reais">Vendido R$</th>
+                    <th title="Percentual de atingimento da meta de valor">
+                      % valor
+                    </th>
+                    {possuiFaixas && (
+                      <th title="Bonificação por pares">Bônus pares</th>
+                    )}
+                    {possuiFaixas && (
+                      <th title="Bonificação por valor de venda">
+                        Bônus valor
+                      </th>
+                    )}
+                    <th title="Total de bonificações já liberadas">
+                      Ganho atual
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </section>
+                </thead>
+                <tbody>
+                  {linhas.map((linha) => (
+                    <tr key={linha.funcionario.id}>
+                      <td className="campaign-name">
+                        {linha.funcionario.nome}
+                      </td>
+                      <td>{campanha.meta_pares}</td>
+                      <td>
+                        {modoEdicao ? (
+                          <input
+                            className="campaign-number-input"
+                            aria-label={`Total de pares de ${linha.funcionario.nome}`}
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={
+                              rascunhos[String(linha.funcionario.id)]
+                                ?.total_pares ?? "0"
+                            }
+                            onChange={(event) =>
+                              setRascunhos((atual) => ({
+                                ...atual,
+                                [String(linha.funcionario.id)]: {
+                                  ...atual[String(linha.funcionario.id)],
+                                  total_pares: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        ) : (
+                          linha.totalPares
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={classePercentual(linha.percentualPares)}
+                        >
+                          {percentual.format(linha.percentualPares)}%
+                        </span>
+                      </td>
+                      <td>
+                        {linha.paresRestantes === 0 ? (
+                          <span className="campaign-target-hit">
+                            Meta batida
+                          </span>
+                        ) : linha.diasRestantes === 0 ? (
+                          <span title="Sem dias restantes">—</span>
+                        ) : (
+                          decimal.format(linha.mediaDiaria)
+                        )}
+                        <small className="campaign-days-left">
+                          {linha.diasRestantes}{" "}
+                          {linha.diasRestantes === 1
+                            ? "dia restante"
+                            : "dias restantes"}
+                        </small>
+                      </td>
+                      <td>{moeda.format(Number(campanha.meta_valor))}</td>
+                      <td>
+                        {modoEdicao ? (
+                          <input
+                            className="campaign-number-input"
+                            aria-label={`Total vendido de ${linha.funcionario.nome}`}
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={
+                              rascunhos[String(linha.funcionario.id)]
+                                ?.total_valor ?? "0"
+                            }
+                            onChange={(event) =>
+                              setRascunhos((atual) => ({
+                                ...atual,
+                                [String(linha.funcionario.id)]: {
+                                  ...atual[String(linha.funcionario.id)],
+                                  total_valor: event.target.value,
+                                },
+                              }))
+                            }
+                          />
+                        ) : (
+                          moeda.format(linha.totalValor)
+                        )}
+                      </td>
+                      <td>
+                        <span
+                          className={classePercentual(linha.percentualValor)}
+                        >
+                          {percentual.format(linha.percentualValor)}%
+                        </span>
+                      </td>
+                      {possuiFaixas && (
+                        <>
+                          <td>
+                            {linha.faixaPares ? (
+                              <span className="campaign-bonus-cell">
+                                <strong>
+                                  {moeda.format(linha.bonusPares)}
+                                </strong>
+                                <small>{rotuloFaixa(linha.faixaPares)}</small>
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                          <td>
+                            {linha.faixaValor ? (
+                              <span className="campaign-bonus-cell">
+                                <strong>
+                                  {moeda.format(linha.bonusValor)}
+                                </strong>
+                                <small>{rotuloFaixa(linha.faixaValor)}</small>
+                              </span>
+                            ) : linha.faixaValorBloqueada ? (
+                              <span
+                                className="campaign-locked-badge"
+                                title={`Bata a meta de pares para liberar (faixa atual: ${rotuloFaixa(linha.faixaValorBloqueada)} → ${moeda.format(Number(linha.faixaValorBloqueada.valor_bonificacao))})`}
+                              >
+                                Bloqueada
+                              </span>
+                            ) : (
+                              "—"
+                            )}
+                          </td>
+                        </>
+                      )}
+                      <td>
+                        {possuiFaixas ? (
+                          <span
+                            className={`campaign-current-gain ${linha.ganhoAtual > 0 ? "campaign-current-gain--positive" : ""}`}
+                          >
+                            <strong>{moeda.format(linha.ganhoAtual)}</strong>
+                            <small>
+                              {linha.proximaFaixaPares
+                                ? `Faltam ${linha.paresFaltando} pares para ${moeda.format(Number(linha.proximaFaixaPares.valor_bonificacao))}`
+                                : linha.bateuMetaPares &&
+                                    linha.proximaFaixaValor
+                                  ? `Faltam ${moeda.format(linha.valorFaltando)} em vendas para ${moeda.format(Number(linha.proximaFaixaValor.valor_bonificacao))}`
+                                  : "Faixa máxima atingida"}
+                            </small>
+                          </span>
+                        ) : (
+                          "—"
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+                {possuiFaixas && (
+                  <tfoot>
+                    <tr className="campaign-bonus-total-row">
+                      <th scope="row" colSpan={possuiFaixas ? 10 : 8}>
+                        Custo total de bonificação
+                      </th>
+                      <td>{moeda.format(totalGanhoAtual)}</td>
+                    </tr>
+                  </tfoot>
+                )}
+              </table>
+            </div>
+          </section>
+          <section className="table-panel campaign-tiers">
+            <header className="panel-header">
+              <div>
+                <h2>Faixas de ganho</h2>
+                <span className="campaign-subtitle">
+                  {formatarMes(campanha.mes)}
+                </span>
+              </div>
+            </header>
+            <div className="campaign-tiers-grid">
+              <section className="campaign-tier-summary">
+                <h3>Faixas de pares</h3>
+                <div className="table-wrapper campaign-tier-table-wrap">
+                  <table className="campaign-tier-table">
+                    <thead>
+                      <tr>
+                        <th>Faixa (%)</th>
+                        <th>Pares necessários</th>
+                        <th>Bonificação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {faixasPares.length ? (
+                        faixasPares.map((faixa) => {
+                          const min = Math.ceil(
+                            (Number(campanha.meta_pares) *
+                              Number(faixa.percentual_min)) /
+                              100,
+                          );
+                          const max =
+                            faixa.percentual_max === null
+                              ? null
+                              : Math.ceil(
+                                  (Number(campanha.meta_pares) *
+                                    Number(faixa.percentual_max)) /
+                                    100,
+                                ) - 1;
+                          return (
+                            <tr key={faixa.id}>
+                              <td>{rotuloFaixa(faixa)}</td>
+                              <td>
+                                {max === null
+                                  ? `${min} pares ou mais`
+                                  : `${min} a ${max} pares`}
+                              </td>
+                              <td>
+                                {moeda.format(Number(faixa.valor_bonificacao))}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="3">
+                            <span>Nenhuma faixa cadastrada</span>{" "}
+                            <button
+                              type="button"
+                              className="campaign-inline-link"
+                              onClick={() => {
+                                setBonificacaoAberta(true);
+                                setFaixaForm({ ...faixaForm, tipo: "pares" });
+                              }}
+                            >
+                              Cadastrar bonificação
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+              <section className="campaign-tier-summary">
+                <h3>Faixas de valor de venda</h3>
+                <p className="campaign-tier-notice">
+                  Liberada somente após atingir 100% da meta de pares.
+                </p>
+                <div className="table-wrapper campaign-tier-table-wrap">
+                  <table className="campaign-tier-table">
+                    <thead>
+                      <tr>
+                        <th>Faixa (%)</th>
+                        <th>Valor de venda necessário</th>
+                        <th>Bonificação</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {faixasValor.length ? (
+                        faixasValor.map((faixa) => {
+                          const minimo =
+                            (Number(campanha.meta_valor) *
+                              Number(faixa.percentual_min)) /
+                            100;
+                          const maximo =
+                            faixa.percentual_max === null
+                              ? null
+                              : (Number(campanha.meta_valor) *
+                                  Number(faixa.percentual_max)) /
+                                100;
+                          return (
+                            <tr key={faixa.id}>
+                              <td>{rotuloFaixa(faixa)}</td>
+                              <td>
+                                {maximo === null
+                                  ? `${moeda.format(minimo)} ou mais`
+                                  : `${moeda.format(minimo)} a ${moeda.format(maximo)}`}
+                              </td>
+                              <td>
+                                {moeda.format(Number(faixa.valor_bonificacao))}
+                              </td>
+                            </tr>
+                          );
+                        })
+                      ) : (
+                        <tr>
+                          <td colSpan="3">
+                            <span>Nenhuma faixa cadastrada</span>{" "}
+                            <button
+                              type="button"
+                              className="campaign-inline-link"
+                              onClick={() => {
+                                setBonificacaoAberta(true);
+                                setFaixaForm({ ...faixaForm, tipo: "valor" });
+                              }}
+                            >
+                              Cadastrar bonificação
+                            </button>
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </section>
+        </>
       )}
     </div>
   );

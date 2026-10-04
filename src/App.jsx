@@ -6,6 +6,8 @@ import {
   CalendarDays,
   Clock3,
   LogOut,
+  PanelLeftClose,
+  PanelLeftOpen,
   Settings2,
   UsersRound,
 } from "lucide-react";
@@ -22,6 +24,9 @@ import ConfiguracoesIndex from "./modules/configuracoes";
 function App() {
   useTheme(); // aplica o tema salvo ao <html> na inicialização
   const [page, setPage] = useState("funcionarios");
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(
+    () => localStorage.getItem("sidebar_collapsed") === "true",
+  );
   const [session, setSession] = useState(null);
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
 
@@ -49,6 +54,14 @@ function App() {
     setPage(p);
   };
 
+  const toggleSidebar = () => {
+    setSidebarCollapsed((collapsed) => {
+      const nextCollapsed = !collapsed;
+      localStorage.setItem("sidebar_collapsed", String(nextCollapsed));
+      return nextCollapsed;
+    });
+  };
+
   if (isCheckingAuth) {
     return (
       <div
@@ -71,7 +84,9 @@ function App() {
   }
 
   return (
-    <div className="dashboard-shell">
+    <div
+      className={`dashboard-shell ${sidebarCollapsed ? "sidebar-collapsed" : ""}`}
+    >
       <aside className="sidebar">
         <div className="brand-wrap">
           <div className="brand-mark" aria-label="Agenda">
@@ -84,6 +99,24 @@ function App() {
               Gestão de <span>Escala</span>
             </p>
           </div>
+          <button
+            type="button"
+            className="sidebar-toggle"
+            onClick={toggleSidebar}
+            aria-label={
+              sidebarCollapsed ? "Expandir navegação" : "Recolher navegação"
+            }
+            title={
+              sidebarCollapsed ? "Expandir navegação" : "Recolher navegação"
+            }
+            aria-expanded={!sidebarCollapsed}
+          >
+            {sidebarCollapsed ? (
+              <PanelLeftOpen size={18} aria-hidden="true" />
+            ) : (
+              <PanelLeftClose size={18} aria-hidden="true" />
+            )}
+          </button>
         </div>
 
         <nav className="main-nav" aria-label="Navegação principal">
@@ -91,49 +124,55 @@ function App() {
             href="#"
             onClick={goTo("funcionarios")}
             className={page === "funcionarios" ? "active" : ""}
+            title="Funcionários"
           >
             <UsersRound size={17} aria-hidden="true" />
-            Funcionários
+            <span>Funcionários</span>
           </a>
           <a
             href="#"
             onClick={goTo("turnos")}
             className={page === "turnos" ? "active" : ""}
+            title="Turnos"
           >
             <Clock3 size={17} aria-hidden="true" />
-            Turnos
+            <span>Turnos</span>
           </a>
           <a
             href="#"
             onClick={goTo("atividades")}
             className={page === "atividades" ? "active" : ""}
+            title="Atividades"
           >
             <Activity size={17} aria-hidden="true" />
-            Atividades
+            <span>Atividades</span>
           </a>
           <a
             href="#"
             onClick={goTo("setores")}
             className={page === "setores" ? "active" : ""}
+            title="Setores"
           >
             <CalendarDays size={17} aria-hidden="true" />
-            Setores
+            <span>Setores</span>
           </a>
           <a
             href="#"
             onClick={goTo("relatorios")}
             className={page === "relatorios" ? "active" : ""}
+            title="Relatórios"
           >
             <BarChart3 size={17} aria-hidden="true" />
-            Relatórios
+            <span>Relatórios</span>
           </a>
           <a
             href="#"
             onClick={goTo("configuracoes")}
             className={page === "configuracoes" ? "active" : ""}
+            title="Configurações"
           >
             <Settings2 size={17} aria-hidden="true" />
-            Configurações
+            <span>Configurações</span>
           </a>
         </nav>
 
@@ -141,7 +180,7 @@ function App() {
           <div className="user-avatar">
             {session?.user?.email?.slice(0, 2).toUpperCase() || "?"}
           </div>
-          <div className="user-meta">
+          <div className="user-meta" title={session?.user?.email || "Usuário"}>
             <strong style={{ fontSize: "0.78rem", wordBreak: "break-all" }}>
               {session?.user?.email || "Usuário"}
             </strong>
@@ -150,6 +189,7 @@ function App() {
             type="button"
             className="logout-button"
             onClick={handleLogout}
+            title="Sair"
           >
             <LogOut size={15} aria-hidden="true" />
             Sair
