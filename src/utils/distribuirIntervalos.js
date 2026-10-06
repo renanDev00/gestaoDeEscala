@@ -205,7 +205,10 @@ function distribuirJanela({
           0,
         );
         const emIntervalo = ocupado.get(slotMin) || 0;
-        const denom = presentes - emIntervalo - minSetor;
+        // A carga do setor deve ser medida sobre quem ainda está disponível naquele
+        // horário. O mínimo do setor não reduz o divisor porque ele representa a
+        // cobertura mínima e não o custo da pausa em si.
+        const disponiveis = presentes - emIntervalo;
         const fluxo =
           fluxoNaHora(fluxoPorHora, slotMin) / (duracao === 15 ? 4 : 1);
         return {
@@ -214,12 +217,13 @@ function distribuirJanela({
           presentes,
           emIntervalo,
           minSetor,
-          denom,
-          fluxoPorPessoa: denom >= 1 ? fluxo / denom : Number.POSITIVE_INFINITY,
+          disponiveis,
+          fluxoPorPessoa:
+            disponiveis >= 1 ? fluxo / disponiveis : Number.POSITIVE_INFINITY,
         };
       });
 
-      const validos = avaliacoes.filter((item) => item.denom >= 1);
+      const validos = avaliacoes.filter((item) => item.disponiveis >= 1);
       const selecionado = validos.length
         ? validos.reduce((melhor, atual) =>
             atual.fluxoPorPessoa < melhor.fluxoPorPessoa ? atual : melhor,
@@ -241,6 +245,7 @@ function distribuirJanela({
         presentes: selecionado.presentes,
         emIntervalo: selecionado.emIntervalo,
         minSetor: selecionado.minSetor,
+        disponiveis: selecionado.disponiveis,
       };
     }
   }
